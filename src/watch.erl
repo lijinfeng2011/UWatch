@@ -8,14 +8,11 @@ start(Port) ->
   watch_user:start(),
   watch_relate:start(),
 
-
-
   {ok, LSocket} = gen_tcp:listen( Port, ?TCP_OPTIONS ),
-  ID = 1,
-  io:format( "listen:~w~n", [Port] ),
-  do_accept(LSocket, ID).
+  io:format( "port:~w~n", [Port] ),
+  do_accept(LSocket).
 
-do_accept(LSocket,ID) ->
+do_accept(LSocket) ->
   {ok, Socket} = gen_tcp:accept(LSocket),
 
   {ok, {IP_Address, Port}} = inet:peername(Socket),
@@ -23,29 +20,26 @@ do_accept(LSocket,ID) ->
   case watch_auth:check_ip( IP_Address ) of
     true -> 
       io:format("IP_Address:~p:~p~n", [ IP_Address, Port ] ),
-      spawn(fun() -> register_client(Socket, ID ) end),
-      NewID = ID + 1,
-      do_accept(LSocket,NewID);
+      spawn(fun() -> register_client(Socket ) end),
+      do_accept(LSocket);
    false ->
       io:format("IP_Address:~p deny~n", [ IP_Address ] ),
       gen_tcp:close( Socket ),
-      do_accept( LSocket, ID )
+      do_accept( LSocket )
    end.
 
 
-
-register_client(Socket,ID) ->
+register_client(Socket) ->
   case gen_tcp:recv(Socket, 0) of
     {ok, "ctrl"} -> 
-        gen_tcp:send( Socket, "into ctrl" ),
-        watch_ctrl:handle(Socket,ID);
+        gen_tcp:send( Socket, "ctrl modle" ),
+        watch_ctrl:handle(Socket);
     {ok, "data"} -> 
-        gen_tcp:send( Socket, "into data" ),
+        gen_tcp:send( Socket, "data modle" ),
         watch_item:handle(Socket);
     {ok, Data} ->
         gen_tcp:send( Socket, "unkown" ),
-        register_client(Socket,ID);
+        register_client(Socket);
     {error, closed} ->
-      io:format( "register client fail~n" )
+      io:format( "register fail" )
   end.
-
