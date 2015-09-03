@@ -16,8 +16,8 @@ handle(Socket) ->
  
         3 ->
             case list_to_tuple( CTRL ) of 
-              { "datalist", TYPE, CNAME } ->
-                list_manager ! {TYPE, CNAME };
+              { "datalist", "add", CNAME } ->
+                item_manager ! {"add", CNAME };
               Other -> io:format( "command undef~n" )
             end;
         4 ->

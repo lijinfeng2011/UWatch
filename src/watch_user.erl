@@ -19,7 +19,7 @@ manage( QList ) ->
        end,
        io:fwrite( "add data list~n" )
   end,
-  io:fwrite( "datalist len:~p~n", [ queue:len( NewQList ) ] ),
+  io:fwrite( "user list len:~p~n", [ queue:len( NewQList ) ] ),
   manage( NewQList ).
 
 stored( NAME, Queue ) ->

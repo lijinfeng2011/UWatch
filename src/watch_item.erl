@@ -32,18 +32,44 @@ manage( QList ) ->
        case queue:member( NAME, QList ) of
            true  -> NewQList = QList;
            false -> NewQList = queue:in( NAME, QList ), 
-                    Pid = spawn(fun() -> stored(NAME,queue:new()) end),
+                    Pid = spawn(fun() -> stored(NAME,queue:new(), queue:new()) end),
                     QNAME = list_to_atom( "item_list#"++ NAME ),
                     register( QNAME, Pid )
-       end
+       end;
+     { "watch", WatchQ } ->
+        WATCH = fun(X) ->
+            QNAME = list_to_atom( "item_list#"++ X ),
+            QNAME ! { "watch", WatchQ },
+        true end,
+        queue:filter(WATCH,QList),
+        NewQList = QList
+
   end,
   io:fwrite( "item queue len:~p~n", [ queue:len( NewQList ) ] ),
   manage( NewQList ).
 
-stored( NAME, Queue ) ->
+stored( NAME, Queue, WatchQ ) ->
   receive
-    { Data } -> NewQueue = queue:in( Data, Queue )
+    { "watch", Q } ->
+      NewWatchQ = queue:new(),
+      WATCH = fun(X) ->
+        case X of
+          { NAME, USER } ->
+              QUSER = list_to_atom( "user_list#"++ NAME ),
+              queue:in( QUSER, NewWatchQ )
+        end,
+      true end,
+      queue:filter(WATCH,WatchQ),
+      NewQueue = Queue;
+       
+    { Data } -> NewQueue = queue:in( Data, Queue ),
+        NewWatchQ = WatchQ,
+        WATCH = fun(X) ->
+            X ! { Data },
+        true end,
+
+        queue:filter(WATCH,WatchQ)
   end,
   io:fwrite( "item ~p len:~p~n", [ NAME, queue:len( NewQueue ) ] ),
-  stored( NAME, NewQueue ).
+  stored( NAME, NewQueue, NewWatchQ ).
 

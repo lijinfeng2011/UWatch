@@ -17,7 +17,7 @@ manage( QList ) ->
        NewQList = queue:in( {NAME,USER}, TMPList ),
        relate_manager_refresh ! { NewQList };
     { "del", NAME, USER } ->
-       Fun = fun(X) ->  { A,B,C} = X,{A,B} /= {NAME,USER} end,
+       Fun = fun(X) ->  X /= {NAME,USER} end,
        NewQList = queue:filter(Fun,QList),
        relate_manager_refresh ! { NewQList };
     { "list", SOCK } ->
@@ -33,14 +33,22 @@ manage( QList ) ->
        NewQList = QList,
        io:fwrite( "unkown the command~n" )
   end,
-  io:fwrite( "datalist len:~p~n", [ queue:len( NewQList ) ] ),
+  io:fwrite( "relate len:~p~n", [ queue:len( NewQList ) ] ),
   manage( NewQList ).
 
 manage_refresh( ) ->
   receive
     { Q } ->
+        TOITEM = fun(X) -> 
+            { NAME,USER } = X,
+            item_manager ! {"add", NAME },
+            user_manager ! {"add", USER },
+        true end,
+        queue:filter(TOITEM,Q),
+
+                                           
+       item_manager ! {"watch", Q };
  
-       io:fwrite( "unkown the cQQQQQQQQQQommand~n" );
     Other ->
        io:fwrite( "unkown the command~n" )
   end,
