@@ -22,9 +22,9 @@ manage( QList ) ->
        relate_manager_refresh ! { NewQList };
     { "list", SOCK } ->
        Fun = fun(X) ->
-           { A,B,C} = X,
-           gen_tcp:send( SOCK, A ++ "#" ++ B ++ "#" ++ C ++"\n"),
-           A == A
+           { A,B} = X,
+           gen_tcp:send( SOCK, A ++ "#" ++ B ++ "#" ++ "\n" ),
+           true
        end,
        queue:filter(Fun,QList),
        NewQList = QList;
@@ -41,8 +41,8 @@ manage_refresh( ) ->
     { Q } ->
         TOITEM = fun(X) -> 
             { NAME,USER } = X,
-            item_manager ! {"add", NAME },
-            user_manager ! {"add", USER },
+            item_manager ! {"add", NAME},
+            user_manager ! {"add", USER},
         true end,
         queue:filter(TOITEM,Q),
 
@@ -53,6 +53,3 @@ manage_refresh( ) ->
        io:fwrite( "unkown the command~n" )
   end,
   manage_refresh().
-
-
-
