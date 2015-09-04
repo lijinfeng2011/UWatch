@@ -1,7 +1,8 @@
 -module(watch_waiter).
 -export([start/1]).
 
--define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
+-define(TCP_OPTIONS, [ binary,{active,false},{packet,2} ]).
+%-define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
 
 start(Port) ->
 
@@ -45,6 +46,7 @@ register_client(Socket) ->
 handle_item( Socket ) ->
   case gen_tcp:recv(Socket, 0) of
     {ok, Data} ->
+       io:format( "data:~p ~n", [ Data ] ),
       DATA = string:tokens( Data, "#" ),
       case length(DATA) > 1 of
           true ->

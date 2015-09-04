@@ -6,5 +6,6 @@ start(Port) ->
   watch_user:start(),
   watch_relate:start(),
   watch_mesg:start(),
+  watch_stat:start(),
   watch_waiter:start(Port).
 
