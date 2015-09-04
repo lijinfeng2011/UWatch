@@ -32,7 +32,7 @@ stored( NAME, WatchQ ) ->
     { "watch", Q } ->
       L = lists:filter( fun(X) -> {N,U} = X, N == NAME end, queue:to_list( Q ) ),
       L2 = lists:map( fun(X) -> {N,U} = X, list_to_atom( "user_list#"++ U ) end, L ),
-      NewWatchQ = queue:from_list( L2 ),
+      NewWatchQ = queue:from_list( L2 );
        
     { "data", Data } ->
         NewWatchQ = WatchQ,

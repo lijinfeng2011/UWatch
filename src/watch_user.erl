@@ -39,7 +39,7 @@ stored( NAME, Queue, TIME ) ->
     {H,M,S} = time(),
     case M == TIME of
       false ->
-        Mesg = binary_to_list(list_to_binary(queue:to_list( Queue ))),
+        Mesg = string:join(queue:to_list( Queue ), "#-cut-#" ),
         mesg_manager ! { "mesg", NAME, Mesg },
         NewTIME = M, NewQueue = queue:new();
       true ->
