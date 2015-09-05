@@ -26,9 +26,9 @@ listen(Port, N) ->
  
     {ok, S} = gen_tcp:listen(Port, Opts),
     Spawn = fun(I) ->   
-                    register(list_to_atom("acceptor_" ++ integer_to_list(I)),
-                             spawn_opt(?MODULE, accept, [S, I], [link, {scheduler, I}]))
-            end,
+        register(list_to_atom("acceptor_" ++ integer_to_list(I)),
+        spawn_opt(?MODULE, accept, [S, I], [link, {scheduler, I}]))
+    end,
     lists:foreach(Spawn, lists:seq(1, N)).
  
 accept(S, I) ->

@@ -1,10 +1,13 @@
 -module(watch_waiter).
 -export([start/1]).
 
--define(TCP_OPTIONS, [ binary,{active,false},{packet,2} ]).
-%-define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
+%-define(TCP_OPTIONS, [ binary,{active,false},{packet,2} ]).
+-define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
 
 start(Port) ->
+
+  Pid = spawn( fun() -> manage() end ),
+  register( xxrelate_manager, Pid ),
 
   {ok, LSocket} = gen_tcp:listen( Port, ?TCP_OPTIONS ),
   io:format( "port:~w~n", [Port] ),
@@ -46,7 +49,17 @@ register_client(Socket) ->
 handle_item( Socket ) ->
   case gen_tcp:recv(Socket, 0) of
     {ok, Data} ->
-       io:format( "data:~p ~n", [ Data ] ),
+ %      io:format( "data:~p ~n", [ Data ] ),
+       DATA = string:tokens( Data, "\n" ),
+       lists:map( fun(X) -> xxrelate_manager ! {X} end, DATA ),
+       handle_item( Socket );
+    {error, closed} -> io:format( "close" ), gen_tcp:close( Socket )
+  end.
+
+manage( ) ->
+  receive
+    { Data } ->
+      io:format( "data:~p ~n", [ Data ] ),
       DATA = string:tokens( Data, "#" ),
       case length(DATA) > 1 of
           true ->
@@ -56,12 +69,12 @@ handle_item( Socket ) ->
                   NAME ! { "data", string:join(D, "#") }
               catch
                   error:badarg -> item_manager ! { "add", LISTNAME }
-              end,
-              handle_item( Socket );
-          false -> io:fwrite( "err data~n" ), handle_item( Socket )
-      end;
-    {error, closed} -> gen_tcp:close( Socket )
-  end.
+              end;
+          false -> io:fwrite( "err data~n" )
+      end
+  end,
+  manage( ).
+
 
 handle_ctrl(Socket) ->
   case gen_tcp:recv(Socket, 0) of
