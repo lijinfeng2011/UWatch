@@ -32,15 +32,35 @@ do_accept(LSocket) ->
 
 register_client(Socket) ->
   case gen_tcp:recv(Socket, 0) of
-    {ok, "ctrl"} -> 
-        gen_tcp:send( Socket, "ctrl modle" ),
-        handle_ctrl(Socket);
+%    {ok, "ctrl"} -> 
+%        gen_tcp:send( Socket, "ctrl modle" ),
+%        handle_ctrl(Socket);
     {ok, "data"} -> 
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
     {ok, Data} ->
-        gen_tcp:send( Socket, "unkown" ),
-        register_client(Socket);
+        case string:tokens( Data, " /" ) of
+            [ "GET", "relate", "list" | _ ] ->
+               gen_tcp:send( Socket, "xxxxxxxxxx" ),
+               relate_manager ! {"list", Socket },
+               gen_tcp:close( Socket );
+            [ "GET", "relate", "add", ITEM, USER| _] ->
+               relate_manager ! {"add", ITEM, USER },
+               gen_tcp:send( Socket, "ok" ),
+               gen_tcp:close( Socket );
+            [ "GET", "relate", "del", ITEM, USER| _] ->
+               relate_manager ! {"del", ITEM, USER },
+               gen_tcp:send( Socket, "ok" ),
+               gen_tcp:close( Socket );
+            [ "GET", "datalist", "add", ITEM, USER| _] ->
+               item_manager ! {"add", ITEM, USER },
+               gen_tcp:send( Socket, "ok" ),
+               gen_tcp:close( Socket );
+ 
+            _ -> 
+               gen_tcp:send( Socket, "undefinition" ),
+               gen_tcp:close( Socket )
+        end;
     {error, closed} ->
       io:format( "register fail" )
   end.
@@ -80,36 +100,36 @@ manage( ) ->
   manage( ).
 
 
-handle_ctrl(Socket) ->
-  case gen_tcp:recv(Socket, 0) of
-    {ok, Data} ->
-      CTRL = string:tokens( Data, "#" ),
-      case length(CTRL) of
-        2 ->
-            case list_to_tuple( CTRL ) of
-              { "relate", "list" } ->
-                relate_manager ! {"list", Socket };
-              Other -> io:format( "commaaaaaaaaaand undef~n" )
-            end;
-
-        3 ->
-            case list_to_tuple( CTRL ) of
-              { "datalist", "add", CNAME } ->
-                item_manager ! {"add", CNAME };
-              Other -> io:format( "command undef~n" )
-            end;
-        4 ->
-            case list_to_tuple( CTRL ) of
-              { "relate", "del", CNAME, CUSER } ->
-                relate_manager ! {"del", CNAME, CUSER };
-              { "relate", "add", CNAME, CUSER } ->
-                relate_manager ! {"add", CNAME, CUSER };
-              Other -> io:format( "command undef~n" )
-            end;
-        Etrue -> io:format( "error command~n" )
-      end,
-      handle_ctrl( Socket );
-    {error, closed} ->
-      gen_tcp:close( Socket )
-  end.
-
+%% handle_ctrl(Socket) ->
+%%   case gen_tcp:recv(Socket, 0) of
+%%     {ok, Data} ->
+%%       CTRL = string:tokens( Data, "#" ),
+%%       case length(CTRL) of
+%%         2 ->
+%%             case list_to_tuple( CTRL ) of
+%%               { "relate", "list" } ->
+%%                 relate_manager ! {"list", Socket };
+%%               Other -> io:format( "commaaaaaaaaaand undef~n" )
+%%             end;
+%% 
+%%         3 ->
+%%             case list_to_tuple( CTRL ) of
+%%               { "datalist", "add", CNAME } ->
+%%                 item_manager ! {"add", CNAME };
+%%               Other -> io:format( "command undef~n" )
+%%             end;
+%%         4 ->
+%%             case list_to_tuple( CTRL ) of
+%%               { "relate", "del", CNAME, CUSER } ->
+%%                 relate_manager ! {"del", CNAME, CUSER };
+%%               { "relate", "add", CNAME, CUSER } ->
+%%                 relate_manager ! {"add", CNAME, CUSER };
+%%               Other -> io:format( "command undef~n" )
+%%             end;
+%%         Etrue -> io:format( "error command~n" )
+%%       end,
+%%       handle_ctrl( Socket );
+%%     {error, closed} ->
+%%       gen_tcp:close( Socket )
+%%   end.
+%% 
