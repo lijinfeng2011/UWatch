@@ -13,12 +13,17 @@ manage( QList ) ->
            false -> NewQList = queue:in( NAME, QList ), 
                     Pid = spawn(fun() -> stored(NAME,queue:new()) end),
                     QNAME = list_to_atom( "item_list#"++ NAME ),
+                    io:fwrite( "item add :~p~n", [ NAME ]  ),
                     register( QNAME, Pid )
        end;
      { "watch", WatchQ } ->
         WATCH = fun(X) ->
             QNAME = list_to_atom( "item_list#"++ X ),
-            QNAME ! { "watch", WatchQ },
+            try
+              QNAME ! { "watch", WatchQ }
+            catch
+              error:badarg -> io:fwrite( "item send warch:~p to p:~p~n", [ WatchQ, QNAME ] )
+            end,
         true end,
         queue:filter(WATCH,QList),
         NewQList = QList
@@ -36,6 +41,7 @@ stored( NAME, WatchQ ) ->
        
     { "data", Data } ->
         NewWatchQ = WatchQ,
+        io:fwrite( "data:~p~n", [ Data ] ),
         WATCH = fun(X) ->
             io:fwrite( "send ~p to~p~n", [ Data, X ]),
             X ! { Data },

@@ -59,18 +59,22 @@ handle_item( Socket ) ->
 manage( ) ->
   receive
     { Data } ->
-      io:format( "data:~p ~n", [ Data ] ),
+%%      io:format( "data:~p ~n", [ Data ] ),
       DATA = string:tokens( Data, "#" ),
-      case length(DATA) > 1 of
+      case length(DATA) > 2 of
           true ->
-              [ LISTNAME | D ] = DATA,
-              NAME = list_to_atom( "item_list#"++ LISTNAME ),
-              try
-                  NAME ! { "data", string:join(D, "#") }
-              catch
-                  error:badarg -> item_manager ! { "add", LISTNAME }
+              [ MARK, LISTNAME | D ] = DATA,
+              case MARK == "@@" of
+                 true ->
+                  NAME = list_to_atom( "item_list#"++ LISTNAME ),
+                  try
+                      NAME ! { "data", string:join(D, "#") }
+                  catch
+                      error:badarg -> item_manager ! { "add", LISTNAME }
+                  end;
+                  false -> false
               end;
-          false -> io:fwrite( "err data~n" )
+          false -> false
       end
   end,
   manage( ).

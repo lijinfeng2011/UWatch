@@ -40,7 +40,12 @@ stored( NAME, Queue, TIME ) ->
     case M == TIME of
       false ->
         Mesg = string:join(queue:to_list( Queue ), "#-cut-#" ),
-        mesg_manager ! { "mesg", NAME, Mesg },
+        try
+            mesg_manager ! { "mesg", NAME, Mesg }
+        catch
+            error:badarg -> io:fwrite( "user:~p send:~p to mesg_manager fail~n", [ NAME, Mesg ] )
+        end,
+ 
         NewTIME = M, NewQueue = queue:new();
       true ->
           NewTIME = TIME, NewQueue = Queue
