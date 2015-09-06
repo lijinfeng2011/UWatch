@@ -1,30 +1,53 @@
 -module(watch_user).
 -export([start/0]).
 
-
 start() ->
-  Pid = spawn( fun() -> manage( queue:new()) end ),
-  register( user_manager, Pid ).
+  Pid = spawn( fun() -> manage() end ),
+  register( user_manager, Pid ),
 
+  spawn( fun() -> refresh() end ).
 
-manage( Q ) ->
+manage() ->
   receive
-    { "add", NAME } ->
-       case queue:member( NAME, Q ) of
-           true  -> NewQ = Q;
-           false -> NewQ = queue:in( NAME, Q ), 
-                    { H,M,S} = time(),
-                    Pid = spawn(fun() -> stored(NAME,queue:new(),M) end),
-                    register( list_to_atom( "user_list#"++ NAME ), Pid )
-       end
+    { "add", USER, SOCK } ->
+         dets:insert(watch_dets, {user, USER }),
+         gen_tcp:send( SOCK, "ok" ), gen_tcp:close( SOCK );
+    { "del", USER, SOCK } ->
+         dets:delete_object(watch_dets, {user, USER }),
+         gen_tcp:send( SOCK, "ok" ), gen_tcp:close( SOCK );
+    { "list", SOCK } ->
+         lists:map(
+             fun(X) -> {user,U} = X, gen_tcp:send( SOCK, U ++ "\n" ) end,
+             dets:lookup( watch_dets, user )
+         ),
+         gen_tcp:close( SOCK );
+    _ -> true
   end,
-  io:fwrite( "user list len:~p~n", [ queue:len( NewQ ) ] ),
-  manage( NewQ ).
+  manage().
+
+refresh() ->
+  io:fwrite( "refresh~n" ),
+  lists:map(
+      fun(X) -> {user,I} = X,
+         USER = list_to_atom( "user_list#"++ I ),
+         case whereis( USER ) =:= undefined of
+           true ->
+             { _,M,_} = time(),
+             Pid = spawn(fun() -> stored(USER,queue:new(),M) end),
+             register( USER, Pid );
+           false -> false
+         end
+      end,
+      dets:lookup( watch_dets, user )
+  ),
+  timer:sleep( 60000 ),
+  refresh().
+
 
 stored( NAME, Queue, TIME ) ->
   receive
     { Data } -> 
-       {H,M,S} = time(),
+       {_,M,_} = time(),
        TmpQueue = queue:in( Data, Queue ),
        case M == TIME of
            false -> 
@@ -36,7 +59,7 @@ stored( NAME, Queue, TIME ) ->
 
        end
   after 3000 ->
-    {H,M,S} = time(),
+    {_,M,_} = time(),
     case M == TIME of
       false ->
         Mesg = string:join(queue:to_list( Queue ), "#-cut-#" ),
@@ -50,7 +73,5 @@ stored( NAME, Queue, TIME ) ->
       true ->
           NewTIME = TIME, NewQueue = Queue
     end
-    
   end,
-  io:fwrite( "user ~p stored len:~p~n", [ NAME, queue:len( NewQueue ) ] ),
   stored( NAME, NewQueue, NewTIME ).

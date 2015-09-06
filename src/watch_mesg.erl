@@ -1,11 +1,9 @@
 -module(watch_mesg).
 -export([start/0]).
 
-
 start() ->
   Pid = spawn( fun() -> manage() end ),
   register( mesg_manager, Pid ).
-
 
 manage() ->
   receive

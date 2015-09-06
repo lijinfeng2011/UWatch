@@ -2,54 +2,27 @@
 -export([start/0]).
 
 start() ->
-  PidRelate = spawn( fun() -> manage( queue:new()) end ),
-  register( relate_manager, PidRelate ),
+  Pid = spawn( fun() -> manage() end ),
+  register( relate_manager, Pid ).
 
-  PidRelateRefresh = spawn( fun() -> manage_refresh() end ),
-  register( relate_manager_refresh, PidRelateRefresh ).
-
-
-manage( QList ) ->
+manage() ->
   receive
-    { "add", NAME, USER } ->
-       Fun = fun(X) -> X /= {NAME,USER} end,
-       TMPList = queue:filter(Fun,QList),
-       NewQList = queue:in( {NAME,USER}, TMPList ),
-       relate_manager_refresh ! { NewQList };
-    { "del", NAME, USER } ->
-       Fun = fun(X) ->  X /= {NAME,USER} end,
-       NewQList = queue:filter(Fun,QList),
-       relate_manager_refresh ! { NewQList };
+    { "add", ITEM, USER, SOCK } ->
+         dets:insert(watch_dets, {relate, ITEM, USER }),
+         dets:insert(watch_dets, {item, ITEM }),
+         dets:insert(watch_dets, {user, USER }),
+         gen_tcp:send( SOCK, "ok" ), gen_tcp:close( SOCK ),
+         item_manager ! {"refreshrelate", ITEM };
+    { "del", ITEM, USER, SOCK } ->
+         dets:delete_object(watch_dets, {relate, ITEM, USER }),
+         gen_tcp:send( SOCK, "ok" ), gen_tcp:close( SOCK ),
+         item_manager ! {"refreshrelate", ITEM };
     { "list", SOCK } ->
-       Fun = fun(X) ->
-           { A,B} = X,
-           gen_tcp:send( SOCK, A ++ "#" ++ B ++ "#" ++ "\n" ),
-           true
-       end,
-       queue:filter(Fun,QList),
-       NewQList = QList;
- 
-    Other ->
-       NewQList = QList,
-       io:fwrite( "unkown the command~n" )
+         lists:map( 
+             fun(X) -> {relate,I,U} = X, gen_tcp:send( SOCK, I ++ ":" ++ U ++ "\n" ) end, 
+             dets:lookup( watch_dets, relate )
+         ),
+         gen_tcp:close( SOCK );
+    _ -> true
   end,
-  io:fwrite( "relate len:~p~n", [ queue:len( NewQList ) ] ),
-  manage( NewQList ).
-
-manage_refresh( ) ->
-  receive
-    { Q } ->
-        TOITEM = fun(X) -> 
-            { NAME,USER } = X,
-            item_manager ! {"add", NAME},
-            user_manager ! {"add", USER},
-        true end,
-        queue:filter(TOITEM,Q),
-
-                                           
-       item_manager ! {"watch", Q };
- 
-    Other ->
-       io:fwrite( "unkown the command~n" )
-  end,
-  manage_refresh().
+  manage().
