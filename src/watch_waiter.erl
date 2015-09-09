@@ -2,6 +2,7 @@
 -export([start/1]).
 
 -define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
+-define(ITEM_MESG_PATH, "../data/item/mesg/").
 
 start(Port) ->
   Pid = spawn( fun() -> manage() end ),
@@ -31,44 +32,31 @@ handle_client(Socket) ->
     {ok, "data"} -> 
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
+    {ok, "data\n"} -> 
+        gen_tcp:send( Socket, "data modle" ),
+        handle_item(Socket);
+ 
     {ok, Data} ->
+%        io:format( "url~p~n", [ Data ] ),
         case string:tokens( Data, " /" ) of
 
-%%%%%%%%%%%%%%%%%%%%  relate %%%%%%%%%%%%%%%%%%%%%%%%%%
-            [ "GET", "relate", "add", ITEM, USER| _] ->
-               relate_manager ! {"add", ITEM, USER, Socket };
-            [ "GET", "relate", "del", ITEM, USER| _] ->
-               relate_manager ! {"del", ITEM, USER, Socket };
-            [ "GET", "relate", "list" | _ ] ->
-               relate_manager ! {"list", Socket };
-            [ "GET", "relate", "refresh" | _ ] ->
-               relate_manager ! {"refresh", Socket };
+            [ "GET", "relate", "add", ITEM, USER| _] -> watch_relate:add(ITEM,USER), ok( Socket );
+            [ "GET", "relate", "del", ITEM, USER| _] -> watch_relate:del(ITEM,USER), ok( Socket );
+            [ "GET", "relate", "list" | _ ]  ->
+               ok( Socket, lists:map( fun(X) -> {I,U} = X, I++ ":" ++ U end,watch_relate:list()));
 
-%%%%%%%%%%%%%%%%%%%%  item %%%%%%%%%%%%%%%%%%%%%%%%%%
-            [ "GET", "item", "add", ITEM| _] ->
-               item_manager ! {"add", ITEM, Socket };
-            [ "GET", "item", "del", ITEM| _] ->
-               item_manager ! {"del", ITEM, Socket };
-            [ "GET", "item", "list" | _ ] ->
-               item_manager ! {"list", Socket };
-            [ "GET", "item", "refresh" | _ ] ->
-               item_manager ! {"refresh", Socket };
+            [ "GET", "item", "add", ITEM| _]     -> watch_item:add(ITEM), ok( Socket );
+            [ "GET", "item", "del", ITEM| _]     -> watch_item:del(ITEM), ok( Socket );
+            [ "GET", "item", "list" | _ ]        -> ok( Socket, watch_item:list() );
+            [ "GET", "item", "mesg", ITEM | _ ]  -> ok( Socket, watch_item:mesg(ITEM) );
+            [ "GET", "item", "count", ITEM | _ ] -> ok( Socket, watch_item:count(ITEM) );
 
-%%%%%%%%%%%%%%%%%%%%  user %%%%%%%%%%%%%%%%%%%%%%%%%%
-            [ "GET", "user", "add", USER| _] ->
-               user_manager ! {"add", USER, Socket };
-            [ "GET", "user", "del", USER| _] ->
-               user_manager ! {"del", USER, Socket };
-            [ "GET", "user", "list" | _ ] ->
-               user_manager ! {"list", Socket };
+            [ "GET", "user", "add", USER, PASS| _]  -> watch_user:add(USER, PASS ),ok( Socket );
+            [ "GET", "user", "del", USER| _]        -> watch_user:del(USER), ok( Socket );
+            [ "GET", "user", "list" | _ ]           -> ok( Socket, watch_user:list() );
+            [ "GET", "user", "auth",USER, PASS| _ ] -> 
+               gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), ok( Socket );
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-            [ "GET", "datalist", "add", ITEM, USER| _] ->
-               item_manager ! {"add", ITEM, USER },
-               gen_tcp:send( Socket, "ok" ),
-               gen_tcp:close( Socket );
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )
@@ -92,14 +80,14 @@ manage() ->
       DATA = string:tokens( Data, "#" ),
       case length(DATA) > 2 of
           true ->
-              [ MARK, LISTNAME | D ] = DATA,
+              [ MARK, ITEM | D ] = DATA,
               case MARK == "@@" of
                  true ->
-                  NAME = list_to_atom( "item_list#"++ LISTNAME ),
+                  NAME = list_to_atom( "item_list#"++ ITEM ),
                   try
                       NAME ! { "data", string:join(D, "#") }
                   catch
-                      error:badarg -> item_manager ! { "add", LISTNAME }
+                      error:badarg -> watch_item:add(ITEM)
                   end;
                   false -> false
               end;
@@ -107,3 +95,10 @@ manage() ->
       end
   end,
   manage().
+
+ok( Socket ) ->
+  gen_tcp:send( Socket, "ok" ), gen_tcp:close( Socket ).
+
+ok( Socket, List ) ->
+  lists:map( fun(X) -> gen_tcp:send( Socket, X ++"\n" ) end, List ),
+  gen_tcp:close( Socket ).

@@ -11,14 +11,14 @@ handle(Socket) ->
             case list_to_tuple( CTRL ) of 
               { "relate", "list" } ->
                 relate_manager ! {"list", Socket };
-              Other -> io:format( "commaaaaaaaaaand undef~n" )
+              _ -> io:format( "commaaaaaaaaaand undef~n" )
             end;
  
         3 ->
             case list_to_tuple( CTRL ) of 
               { "datalist", "add", CNAME } ->
                 item_manager ! {"add", CNAME };
-              Other -> io:format( "command undef~n" )
+              _ -> io:format( "command undef~n" )
             end;
         4 ->
             case list_to_tuple( CTRL ) of 
@@ -26,9 +26,9 @@ handle(Socket) ->
                 relate_manager ! {"del", CNAME, CUSER };
               { "relate", "add", CNAME, CUSER } ->
                 relate_manager ! {"add", CNAME, CUSER };
-              Other -> io:format( "command undef~n" )
+              _ -> io:format( "command undef~n" )
             end;
-        Etrue -> io:format( "error command~n" )
+        _ -> io:format( "error command~n" )
       end,
       handle( Socket );
     {error, closed} ->
