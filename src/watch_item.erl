@@ -10,11 +10,21 @@ start() ->
 
 mesg( ITEM ) ->
   Index = getmaxindex( ?ITEM_MESG_PATH ++ ITEM ),
-  Log = list_to_atom( "item_"++ ITEM ++ "_" ++ Index ),
-  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
-  case disk_log:chunk(Log, start) of
-    { _, L } -> L
+  PATH = ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index,
+  case ehf_disk_log:is_valid(PATH) of
+    true -> ehf_disk_log:dump(PATH);
+    false -> []
   end.
+%  Log = list_to_atom( lists:concat( ["item_m_", ITEM, "_", Index] )),
+%  PATH = ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index,
+%  disk_log:open( [{name, Log},{mode, read_only},{file, PATH }]),
+%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
+%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
+%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
+%  case disk_log:chunk(Log, start) of
+%    {_, L } -> L;
+%    _ -> []
+%  end.
 
 count( ITEM ) ->
   Index = getmaxindex( ?ITEM_COUNT_PATH ++ ITEM ),
@@ -35,22 +45,23 @@ refresh() ->
   lists:map( 
       fun(X) -> {item,I} = X,
          ITEM = list_to_atom( "item_list#"++ I ), 
+             io:format( "xxx~p~n", [ITEM] ),
          case whereis( ITEM ) =:= undefined of
            true -> 
              file:make_dir( ?ITEM_MESG_PATH ++ I ),
              file:make_dir( ?ITEM_COUNT_PATH ++ I ),
 
              MIndex = getmaxindex( ?ITEM_MESG_PATH ++I ),
-             MLog = list_to_atom( "item_m_"++ I ++ "_" ++ MIndex ),
-             open_w( MLog, ?ITEM_MESG_PATH ++ I ++"/" ++ MIndex ),
-
              CIndex = getmaxindex( ?ITEM_COUNT_PATH ++I ),
-             CLog = list_to_atom( "item_c_"++ I ++ "_" ++ CIndex ),
+
+             MLog = list_to_atom(lists:concat([ "item_m_", I, "_", MIndex ])),
+             CLog = list_to_atom(lists:concat([ "item_c_", I, "_", CIndex ])),
+
+             open_w( MLog, ?ITEM_MESG_PATH ++ I ++"/" ++ MIndex ),
              open_w( MLog, ?ITEM_COUNT_PATH ++ I ++"/" ++ CIndex ),
 
              Pid = spawn(fun() -> stored(I,sets:new(),queue:new(),61,MLog,MIndex, queue:new(),CLog) end),
-             register( ITEM, Pid ),
-             io:format( "xxx~p~n", [ITEM] );
+             register( ITEM, Pid );
            false -> ITEM ! { cut }
          end
       end,
@@ -109,13 +120,18 @@ open_w( H, PATH ) ->
   disk_log:open( [{name, H},{mode, read_write},{size, 32768},{file, PATH }]).
 
 open_r( H, PATH ) ->
+  io:format( "open:~p~n", [ PATH ] ),
   disk_log:open( [{name, H},{mode, read_only},{file, PATH }]).
 
 getmaxindex( PATH ) ->
   case file:list_dir( PATH ) of
     {ok,List} ->
       case length(List) > 1 of
-        true -> lists:max( lists:map( fun(X) -> try list_to_integer(X) catch error:badarg -> 0 end end, List ) );
+        true -> integer_to_list( lists:max( 
+                  lists:map(
+                    fun(X) -> try list_to_integer(X) catch error:badarg -> 0 end end,
+                    List ) 
+                ));
         false -> "0"
       end;
      _ -> "0"
