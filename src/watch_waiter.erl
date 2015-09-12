@@ -40,22 +40,27 @@ handle_client(Socket) ->
 %        io:format( "url~p~n", [ Data ] ),
         case string:tokens( Data, " /" ) of
 
-            [ "GET", "relate", "add", ITEM, USER| _] -> watch_relate:add(ITEM,USER), ok( Socket );
-            [ "GET", "relate", "del", ITEM, USER| _] -> watch_relate:del(ITEM,USER), ok( Socket );
+            [ "GET", "relate", "add", ITEM, USER| _] -> 
+              lists:foreach( fun(X) -> watch_relate:add(X,USER) end,string:tokens( ITEM, ":" ) ), ok( Socket );
+            [ "GET", "relate", "del", ITEM, USER| _] ->
+              lists:foreach( fun(X) -> watch_relate:del(X,USER) end,string:tokens( ITEM, ":" ) ), ok( Socket );
             [ "GET", "relate", "list" | _ ]  ->
                ok( Socket, lists:map( fun(X) -> {I,U} = X, I++ ":" ++ U end,watch_relate:list()));
+            [ "GET", "relate", "list4user", USER | _ ]  ->
+               ok( Socket, watch_relate:list4user(USER) );
 
             [ "GET", "item", "add", ITEM| _]     -> watch_item:add(ITEM), ok( Socket );
             [ "GET", "item", "del", ITEM| _]     -> watch_item:del(ITEM), ok( Socket );
             [ "GET", "item", "list" | _ ]        -> ok( Socket, watch_item:list() );
-            [ "GET", "item", "mesg", ITEM | _ ]  -> ok( Socket, watch_item:mesg(ITEM) );
-            [ "GET", "item", "count", ITEM | _ ] -> ok( Socket, watch_item:count(ITEM) );
+            [ "GET", "item", "mesg", ITEM | _ ]  -> ok( Socket, watch_item:disk_log(ITEM, "mesg" ) );
+            [ "GET", "item", "count", ITEM | _ ] -> ok( Socket, watch_item:disk_log(ITEM, "count" ) );
 
             [ "GET", "user", "add", USER, PASS| _]  -> watch_user:add(USER, PASS ),ok( Socket );
             [ "GET", "user", "del", USER| _]        -> watch_user:del(USER), ok( Socket );
             [ "GET", "user", "list" | _ ]           -> ok( Socket, watch_user:list() );
+            [ "GET", "user", "mesg", USER, ITEM | _ ]     -> ok( Socket, watch_user:mesg(USER,ITEM) );
             [ "GET", "user", "auth",USER, PASS| _ ] -> 
-               gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), ok( Socket );
+               gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), gen_tcp:close( Socket );
 
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),

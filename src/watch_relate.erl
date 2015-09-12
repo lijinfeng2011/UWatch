@@ -1,6 +1,6 @@
 -module(watch_relate).
 %-export([start/0,add/2,del/2,list/0]).
--export([add/2,del/2,list/0]).
+-export([add/2,del/2,list/0,list4user/1]).
 
 %start() ->
 %  Pid = spawn( fun() -> manage() end ),
@@ -16,6 +16,23 @@ del( ITEM, USER ) ->
 
 list() ->
   lists:map( fun(X) -> {_,I,U} = X, { I, U } end,dets:lookup( watch_dets, relate )).
+
+%list4user(USER) ->
+%  lists:map( fun(X) -> {_,I,_} = X, I end, lists:filter( fun(X) -> {_,_,U} = X, U == USER end,dets:lookup( watch_dets, relate ) )).
+
+list4user(USER) ->
+  lists:map(
+    fun(X) -> {_,I,_} = X,
+        PubIndex = watch_item:getindex(I),
+        PriIndex = watch_user:getindex(USER,I),
+%        PubIndex =1,
+%        PriIndex =3,
+        I ++ ":" ++ integer_to_list( PubIndex - PriIndex )
+    end, 
+    lists:filter( 
+      fun(X) -> {_,_,U} = X, U == USER end,dets:lookup( watch_dets, relate )
+    )
+  ).
   
 %manage() ->
 %  receive

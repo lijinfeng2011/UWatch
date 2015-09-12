@@ -1,38 +1,12 @@
 -module(watch_item).
--export([start/0,mesg/1,add/1,del/1,list/0]).
+-export([start/0,disk_log/2,add/1,del/1,list/0,setindex/2,getindex/1]).
 
--define(ITEM_MESG_PATH, "../data/item/mesg/").
--define(ITEM_COUNT_PATH, "../data/item/count/").
+-define(ITEM_PATH,"../data/item/").
 
-start() ->
-  spawn( fun() -> refresh() end ).
+start() -> spawn( fun() -> refresh() end ).
 
-
-mesg( ITEM ) ->
-  Index = getmaxindex( ?ITEM_MESG_PATH ++ ITEM ),
-  PATH = ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index,
-  case ehf_disk_log:is_valid(PATH) of
-    true -> ehf_disk_log:dump(PATH);
-    false -> []
-  end.
-%  Log = list_to_atom( lists:concat( ["item_m_", ITEM, "_", Index] )),
-%  PATH = ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index,
-%  disk_log:open( [{name, Log},{mode, read_only},{file, PATH }]),
-%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
-%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
-%%  open_r( Log, ?ITEM_MESG_PATH ++ ITEM ++"/" ++ Index ),
-%  case disk_log:chunk(Log, start) of
-%    {_, L } -> L;
-%    _ -> []
-%  end.
-
-count( ITEM ) ->
-  Index = getmaxindex( ?ITEM_COUNT_PATH ++ ITEM ),
-  Log = list_to_atom( "item_"++ ITEM ++ "_" ++ Index ),
-  open_r( Log, ?ITEM_COUNT_PATH ++ ITEM ++"/" ++ Index ),
-  case disk_log:chunk(Log, start) of
-    { _, L } -> L
-  end.
+disk_log( ITEM, TYPE ) ->
+  {_,L} = watch_disk_log:read_log( ?ITEM_PATH ++ ITEM ++ "/" ++ TYPE ), L.
 
 add( ITEM ) ->
   dets:insert(watch_dets, {item, ITEM }).
@@ -41,98 +15,83 @@ del( ITEM ) ->
 list() ->
   lists:map( fun(X) -> {_,A} = X, A end,dets:lookup( watch_dets, item )).
   
+setindex( ITEM, VALUE ) ->
+  case dets:open_file( item_index_dets,[{file, "../data/item_index.dets" },{type,set},{auto_save,10}]) of
+    {ok,_} -> dets:insert(item_index_dets, {ITEM, VALUE });
+    _ -> ok
+  end.
+
+%% get the item index from user
+getindex( ITEM ) ->
+  case dets:open_file( item_index_dets,[{file, "../data/item_index.dets" },{type,set},{auto_save,10}]) of
+    {ok, _} ->
+      case catch dets:lookup( item_index_dets,ITEM ) of
+        { 'EXIT',_ } ->0;
+        [{ITEM,V}] -> V;
+        _ -> 0
+      end;
+    _ -> 0
+  end.
+
 refresh() ->
+  {{Y,M,D},{H,Mi,_}} = calendar:local_time(),
+  TIME = lists:concat( [ Y,"-",M,"-",D,"-",H,"-",Mi ] ),
   lists:map( 
       fun(X) -> {item,I} = X,
          ITEM = list_to_atom( "item_list#"++ I ), 
-             io:format( "xxx~p~n", [ITEM] ),
          case whereis( ITEM ) =:= undefined of
            true -> 
-             file:make_dir( ?ITEM_MESG_PATH ++ I ),
-             file:make_dir( ?ITEM_COUNT_PATH ++ I ),
-
-             MIndex = getmaxindex( ?ITEM_MESG_PATH ++I ),
-             CIndex = getmaxindex( ?ITEM_COUNT_PATH ++I ),
-
-             MLog = list_to_atom(lists:concat([ "item_m_", I, "_", MIndex ])),
-             CLog = list_to_atom(lists:concat([ "item_c_", I, "_", CIndex ])),
-
-             open_w( MLog, ?ITEM_MESG_PATH ++ I ++"/" ++ MIndex ),
-             open_w( MLog, ?ITEM_COUNT_PATH ++ I ++"/" ++ CIndex ),
-
-             Pid = spawn(fun() -> stored(I,sets:new(),queue:new(),61,MLog,MIndex, queue:new(),CLog) end),
-             register( ITEM, Pid );
-           false -> ITEM ! { cut }
+             file:make_dir( ?ITEM_PATH ++ I ),
+             case watch_disk_log:open( ?ITEM_PATH ++ I ++ "/mesg", 65536, 3) of
+               {ok, MLog} ->
+                  case watch_disk_log:open( ?ITEM_PATH ++ I ++ "/count", 65536, 3) of
+                    {ok, CLog} ->
+                      IL = dets:lookup( item_index_dets, I ),
+                      case lists:flatlength( IL ) == 1 of
+                        true -> [{_,INDEX}] = IL, Index = INDEX+1;
+                        false -> Index = 1
+                      end,
+                      Pid = spawn(fun() -> stored(I,MLog, CLog,queue:new(),Index) end),
+                      register( ITEM, Pid );
+                     _ -> io:format( "err~n" ), watch_disk_log:close(MLog)
+                  end;
+               _ -> io:format( "err~n" )
+             end;
+           false -> ITEM ! { cut,TIME }
          end
       end,
       dets:lookup( watch_dets, item )
   ),
-  timer:sleep( 60000 ),
+  timer:sleep( 3000 ),
   refresh().
 
-stored( NAME, WatchS, HistoryQ, TIME,Log,INDEX, Q, COUNTLog ) ->
+stored(NAME,MLog,CLog,Q,Index) ->
   receive
     { "data", Data } ->
+        io:format( "~p ~p ~n", [NAME,Index]),
         NewQ = queue:in( Data, Q ),
-        case disk_log:log(Log, Data) of
-            {ok, _} ->   NewINDEX = INDEX, NewLog = Log;
-            {error,{full,_}} -> 
-                 NewINDEX = integer_to_list(list_to_integer( INDEX ) + 1 ),
-                 NewLog = list_to_atom( "item_"++ NAME ++ "_" ++  NewINDEX),
-                 disk_log:close(Log), 
-                 open_w( Log, ?ITEM_MESG_PATH ++ NAME ++"/" ++ NewINDEX ),
-                 disk_log:log(Log, Data);
-            _ -> 
-                 disk_log:close(Log),
-                 open_w( Log, ?ITEM_MESG_PATH ++ NAME ++"/" ++ INDEX ),
-                 NewINDEX = INDEX, NewLog = Log
-
-        end,
-        NewWatchS = WatchS, NewTIME = TIME, NewCOUNTLog = COUNTLog;
-      { cut } -> NewTIME = TIME,
-              NewHistoryQ = HistoryQ,  NewINDEX = INDEX, NewLog = Log, NewCOUNTLog = COUNTLog,
+        watch_disk_log:write( MLog, "*" ++ integer_to_list( Index ) ++ "*"++ Data ),
+        NewIndex = Index + 1;
+      { cut,TIME } -> 
               Mesg = string:join(queue:to_list( Q ), "#-cut-#" ),
+              List =lists:map(
+                fun(X) -> {_,_,U} = X, list_to_atom( "user_list#"++ U ) end,
+                lists:filter(
+                  fun(X) -> {_,N,_} = X,N == NAME end,dets:lookup( watch_dets, relate )
+                )
+              ),
               sets:filter(
-              fun(X) -> 
-                  try X ! { Mesg }, io:format( "item ~p send msg to user ~p~n", [ NAME, X ])
-                  
-                  catch
-                    error:badarg -> io:fwrite( "~p send mesg to user ~p fail. ~n", [ NAME, X ] )
-                  end,
-              true end,
-              WatchS),
+                fun(X) -> 
+                    try X ! { Mesg }, io:format( "item ~p send msg to user ~p~n", [ NAME, X ])
+                    catch
+                      error:badarg -> io:fwrite( "~p send mesg to user ~p fail. ~n", [ NAME, X ] )
+                    end,
+                true end,
+              sets:from_list(List)),
               NewQ = queue:new(),
-
-              List = dets:lookup( watch_dets, relate ),
-              MyL  = lists:filter(fun(X) -> {_,N,_} = X,N == NAME end, List),
-              MyL2 =lists:map(fun(X) -> {_,_,U} = X, list_to_atom( "user_list#"++ U ) end, MyL ),
-              NewWatchS = sets:from_list(MyL2),
-
-
-              disk_log:log(COUNTLog, queue:len( Q ));
-      true -> NewWatchS = WatchS, NewTIME = TIME,
-              NewHistoryQ = HistoryQ,  NewINDEX = INDEX, NewLog = Log,
-              NewQ = Q, NewCOUNTLog = COUNTLog
+              disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(queue:len(Q)) ),
+              NewIndex = Index,
+              setindex(NAME,Index);
+      true -> NewQ = Q, NewIndex = Index
   end,
-  stored( NAME, NewWatchS, HistoryQ, NewTIME,NewLog,NewINDEX, NewQ, NewCOUNTLog ).
-
-open_w( H, PATH ) ->
-  disk_log:open( [{name, H},{mode, read_write},{size, 32768},{file, PATH }]).
-
-open_r( H, PATH ) ->
-  io:format( "open:~p~n", [ PATH ] ),
-  disk_log:open( [{name, H},{mode, read_only},{file, PATH }]).
-
-getmaxindex( PATH ) ->
-  case file:list_dir( PATH ) of
-    {ok,List} ->
-      case length(List) > 1 of
-        true -> integer_to_list( lists:max( 
-                  lists:map(
-                    fun(X) -> try list_to_integer(X) catch error:badarg -> 0 end end,
-                    List ) 
-                ));
-        false -> "0"
-      end;
-     _ -> "0"
-  end.
+  stored(NAME,MLog,CLog,NewQ,NewIndex).
