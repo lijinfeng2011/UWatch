@@ -2,13 +2,12 @@
 -export([start/1]).
 
 -define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
--define(ITEM_MESG_PATH, "../data/item/mesg/").
 
 start(Port) ->
-  Pid = spawn( fun() -> manage() end ),
+  Pid = spawn(fun() -> manage() end),
   register( waiter_manager, Pid ),
 
-  {ok, LSocket} = gen_tcp:listen( Port, ?TCP_OPTIONS ),
+  {ok, LSocket} = gen_tcp:listen(Port, ?TCP_OPTIONS),
   io:format( "port:~w~n", [Port] ),
   do_accept(LSocket).
 
@@ -37,9 +36,8 @@ handle_client(Socket) ->
         handle_item(Socket);
  
     {ok, Data} ->
-%        io:format( "url~p~n", [ Data ] ),
+spawn( fun() ->
         case string:tokens( Data, " /" ) of
-
             [ "GET", "relate", "add", ITEM, USER| _] -> 
               lists:foreach( fun(X) -> watch_relate:add(X,USER) end,string:tokens( ITEM, ":" ) ), ok( Socket );
             [ "GET", "relate", "del", ITEM, USER| _] ->
@@ -65,7 +63,8 @@ handle_client(Socket) ->
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )
-        end;
+        end
+end);
     {error, closed} ->
       io:format( "register fail" )
   end.

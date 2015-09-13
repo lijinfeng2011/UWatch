@@ -34,7 +34,6 @@ auth( USER, PASS ) ->
 
 setindex( USER, ITEM, VALUE ) ->
   User = list_to_atom( "user_index_ets_" ++ USER ),
-  io:format( "set index ~p~p~p~n", [USER, ITEM, VALUE]),
   case dets:open_file( User,[{file, ?USER_PATH ++ USER ++"/index.dets" },{type,set},{auto_save,10}]) of
     {ok,_} -> dets:insert(User, {ITEM, VALUE });
     _ -> ok
@@ -55,7 +54,7 @@ getindex( USER, ITEM ) ->
 
 mesg( USER, ITEM ) ->
   ID = getindex( USER,ITEM ),
-  io:format( "iiidddd~p~n", [ID]),
+  
   lists:map( 
     fun(X) ->
        case re:split(X,"[*]",[{return,list}]) of
@@ -95,7 +94,6 @@ refresh() ->
 stored( NAME, Queue, TIME ) ->
   receive
     { ITEM, Data } -> 
-       io:format("user ~p get data ~p~n",[NAME, ITEM, Data]),
        TmpQueue = queue:in( { ITEM, Data }, Queue ),
        {_,M,_} = time(),
        case M == TIME of
