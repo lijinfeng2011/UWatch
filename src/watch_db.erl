@@ -1,113 +1,107 @@
--module(test_mnesia).
+-module(watch_db).
 -compile(export_all).
 
+-include_lib("stdlib/include/qlc.hrl").
 
--record(item,{id,plan}).
+-record(item,{name,index}).
+-record(user,{name,passwd,info}).
+-record(relate,{item,user}).
+-record(follow,{owner,follower}).
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item],20000).
+    mnesia:wait_for_tables([item,user,relate],20000).
 
 init() ->
-    mnesia:create_schema([node()]),
+    NodeList = [node()],
+    io:format("~p~n", NodeList ),
+    mnesia:create_schema(NodeList),
     mnesia:start(),
-    mnesia:create_table(item,[{attributes,record_info(fields,item)}]),
+    mnesia:create_table(item,[{attributes,record_info(fields,item)},{disc_copies, NodeList} ]),
+    mnesia:create_table(user,[{attributes,record_info(fields,user)},{disc_copies, NodeList} ]),
+    mnesia:create_table(relate,[{attributes,record_info(fields,relate)},{disc_copies, NodeList},{type,bag} ]),
+    mnesia:create_table(follow,[{attributes,record_info(fields,follow)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:stop().
 
-%%== 查询 =============================================================
+%% do =============================================================
 
 do(Q) ->
     F = fun() -> qlc:e(Q) end,
     {atomic,Val} = mnesia:transaction(F),
     Val.
 
-%% SELECT * FROM shop
-%% 选取所有列
-demo(select_shop) ->
-    do(qlc:q([X || X <- mnesia:table(shop)]));
+%% item ===================================================
+get_item() ->
+    do(qlc:q([X || X <- mnesia:table(item)])).
 
-%% SELECT  item,quantity FROM shop
-%% 选取指定列
-demo(select_some) ->
-    do(qlc:q([{X#shop.item, X#shop.quantity} || X <- mnesia:table(shop)]));
+get_item(Name) ->
+    List = do(qlc:q([X || X <- mnesia:table(item), X#item.name == Name ])),
+    case lists:flatlength(List) == 1 of
+      true -> [{_,_,I}] = List, I;
+      false -> 0
+    end.
 
-%% SELECT * FROM shop WHERE shop.quantity < 250
-%% 选取指定条件的数据
-demo(where) ->
-    do(qlc:q([X || X <- mnesia:table(shop),
-                X#shop.quantity < 250
-            ]));
+set_item(Name,Index) ->
+    Row = #item{name = Name,index = Index},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
 
-%% 关联查询
-%% SELECT shop.* FROM shop,cost wHERE shop.item = cost.name AND cost.price < 2 AND shop.quantity < 250
-demo(join) ->
-    do(qlc:q([X || X <- mnesia:table(shop),
-                   X#shop.quantity < 250,
-                   Y <- mnesia:table(cost),
-                   X#shop.item =:= Y#cost.name,
-                   Y#cost.price < 2
-            ])).
+list_item() ->
+    do(qlc:q([X#item.name || X <- mnesia:table(item)])).
 
-%% == 数据操作 ===============================================
-
-%% 增加一行
-add_shop_item(Name,Quantity,Cost) ->
-    Row = #shop{item = Name,quantity = Quantity, cost = Cost},
+%% user =====================================================
+set_user(Name,Passwd,Info) ->
+    Row = #user{name = Name,passwd = Passwd, info = Info},
     F = fun() ->
             mnesia:write(Row)
     end,
     mnesia:transaction(F).
 
-%% 删除一行
-remove_shop_item(Item) ->
-    Oid = {shop,Item},
-    F = fun() ->
-            mnesia:delete(Oid)
-    end,
+set_user_passwd(Name,Passwd) ->
+    List = get_user(Name),
+    case lists:flatlength(List) == 1 of
+         true -> [{_,N,_,I}] = List, set_user(N,Passwd,I);
+         false -> { error }
+    end.
+
+set_user_info(Name,Info) ->
+    List = get_user(Name),
+    case lists:flatlength(List) == 1 of
+         true -> [{_,N,P,_}] = List, set_user(N,P,Info);
+         false -> { error }
+    end.
+
+get_user() ->
+    do(qlc:q([X || X <- mnesia:table(user)])).
+
+get_user(NAME) ->
+    do(qlc:q([X || X <- mnesia:table(user), X#user.name == NAME ])).
+
+get_user_info(NAME) ->
+    do(qlc:q([ X#user.info || X <- mnesia:table(user), X#user.name == NAME ])).
+
+list_user() ->
+    do(qlc:q([X#user.name || X <- mnesia:table(user)])).
+
+%% relate  ====================================================
+add_relate(Item,User) ->
+    Row = #relate{item = Item,user = User},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+del_relate(Item,User) ->
+    F = fun() -> mnesia:delete_object( #relate{ item = Item, user = User } ) end,
     mnesia:transaction(F).
 
-%% 取消一个事务
-former(Nwant) ->
-    F = fun() ->
-            %% find the num of apples
-            [Apple] = mnesia:read({shop,apple}),
-            Napples = Apple#shop.quantity,
-            %% update the database
-            NewApple = Apple#shop{quantity = Napples + 2 * Nwant},
-            mnesia:write(NewApple),
-            %% find the num of oranges
-            [Orange] = mnesia:read({shop,orange}),
-            Noranges = Orange#shop.quantity,
-            if 
-                Noranges >= Nwant ->
-                    %% update the database
-                    Num = Noranges - Nwant,
-                    NewOrange = Orange#shop{quantity = Num},
-                    mnesia:write(NewOrange);
-                true ->
-                    %% no enough oranges 取消事务
-                    mnesia:abort(oranges)
-            end
-    end,
-    mnesia:transaction(F).
+list_relate() ->
+    do(qlc:q([X || X <- mnesia:table(relate)])).
 
-%% 保存复杂数据
-add_plans() ->
-    D1 = #design{
-        id = {joe,1},
-        plan = {circle,10}
-    },
-    D2 = #design{
-        id = fred,
-        plan = {rectangle,[10,5]}
-    },
-    F = fun() ->
-            mnesia:write(D1),
-            mnesia:write(D2)
-    end,
+%%follow =======================================================
+add_follow(Owner,Follower) ->
+    Row = #follow{owner = Owner,follower = Follower},
+    F = fun() -> mnesia:write(Row) end,
     mnesia:transaction(F).
-
-%% 获复杂数据
-get_plans(PlanId) ->
-    F = fun() -> mnesia:read({design,PlanId}) end,
+del_follow(Owner,Follower) ->
+    F = fun() -> mnesia:delete_object( #follow{ owner = Owner,follower = Follower } ) end,
     mnesia:transaction(F).
+list_follow() ->
+    do(qlc:q([X || X <- mnesia:table(follow)])).
