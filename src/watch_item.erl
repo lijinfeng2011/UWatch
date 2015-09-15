@@ -2,37 +2,20 @@
 -export([start/0,disk_log/2,add/1,del/1,list/0,setindex/2,getindex/1]).
 
 -define(ITEM_PATH,"../data/item/").
--define(ITEM_INDEX_PATH,"../data/item_index.dets").
 
 start() -> spawn( fun() -> refresh() end ).
 
 disk_log( ITEM, TYPE ) ->
   {_,L} = watch_disk_log:read_log( ?ITEM_PATH ++ ITEM ++ "/" ++ TYPE ), L.
 
-add( ITEM ) ->
-  dets:insert(watch_dets, {item, ITEM }).
-del( ITEM ) ->
-  dets:delete_object(watch_dets, {item, ITEM }).
-list() ->
-  lists:map( fun(X) -> {_,A} = X, A end,dets:lookup( watch_dets, item )).
-  
-setindex( ITEM, VALUE ) ->
-  case dets:open_file( item_index_dets,[{file, ?ITEM_INDEX_PATH },{type,set},{auto_save,10}]) of
-    {ok,_} -> dets:insert(item_index_dets, {ITEM, VALUE });
-    _ -> ok
-  end.
+add( ITEM ) -> 
+   watch_db:set_item( ITEM, watch_db:get_item( ITEM )).
+del( ITEM ) -> watch_db:del_item( ITEM ).
 
-%% get the item index from user
-getindex( ITEM ) ->
-  case dets:open_file( item_index_dets,[{file, ?ITEM_INDEX_PATH },{type,set},{auto_save,10}]) of
-    {ok, _} ->
-      case catch dets:lookup( item_index_dets,ITEM ) of
-        { 'EXIT',_ } ->0;
-        [{ITEM,V}] -> V;
-        _ -> 0
-      end;
-    _ -> 0
-  end.
+list() -> watch_db:list_item().
+  
+setindex( ITEM, VALUE ) -> watch_db:set_item(ITEM, VALUE).
+getindex( ITEM ) -> watch_db:get_item(ITEM).
 
 refresh() ->
   {{Y,M,D},{H,Mi,_}} = calendar:local_time(),
@@ -47,11 +30,7 @@ refresh() ->
                {ok, MLog} ->
                   case watch_disk_log:open( ?ITEM_PATH ++ I ++ "/count", 65536, 3) of
                     {ok, CLog} ->
-                      IL = dets:lookup( item_index_dets, I ),
-                      case lists:flatlength( IL ) == 1 of
-                        true -> [{_,INDEX}] = IL, Index = INDEX+1;
-                        false -> Index = 1
-                      end,
+                      Index = watch_db:get_item(I) + 1,
                       Pid = spawn(fun() -> stored(I,MLog, CLog,queue:new(),Index) end),
                       register( ITEM, Pid );
                      _ -> io:format( "err~n" ), watch_disk_log:close(MLog)
@@ -69,9 +48,9 @@ refresh() ->
 stored(NAME,MLog,CLog,Q,Index) ->
   receive
     { "data", Data } ->
-        NewQ = queue:in( Data, Q ),
-        watch_disk_log:write( MLog, "*" ++ integer_to_list( Index ) ++ "*"++ Data ),
-        NewIndex = Index + 1;
+        NewQ = queue:in(Data,Q),
+        watch_disk_log:write(MLog,"*"++integer_to_list(Index)++"*"++Data),
+        NewIndex = Index +1;
     { cut,TIME } -> 
         Mesg = string:join(queue:to_list( Q ), "#-cut-#" ),
         List =lists:map(

@@ -1,60 +1,35 @@
 -module(watch_user).
 -export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,mesg/2]).
 
--define(USER_PATH, "../data/user/").
-
 start() ->
-
   spawn( fun() -> refresh() end ).
 
-
-add( USER, PASS ) ->
-  L1 = dets:lookup( watch_dets, user ),
-  L2 = lists:filter(fun(X) -> {_,U,_} = X,U == USER end, L1),
-  case length( L2 ) > 0 of
+add(User,Passwd) ->
+  case length(watch_db:get_user(User)) == 1 of
     true -> true;
-    false -> dets:insert(watch_dets, {user, USER, PASS })
+    false -> watch_db:set_user(User,Passwd,"")
   end.
 
-del( USER ) ->
-  L1 = dets:lookup( watch_dets, user ),
-  L2 = lists:filter(fun(X) -> {_,U,_} = X,U == USER end, L1),
-  lists:foreach( fun(X) -> dets:delete_object(watch_dets, X) end, L2).
+del(User) -> watch_db:del_user(User).
+list() -> watch_db:list_user().
 
-list() ->
-  lists:map( fun(X) -> {_,U,_} = X, U end, dets:lookup( watch_dets, user )).
+auth(User,Passwd) ->
+  PASS = watch_db:get_user_passwd(User),
+   case length(PASS) == 1 of
+       true ->
+           [P] = PASS,
+           case P == Passwd of
+               true -> "ok";
+               false -> "fail"
+           end;
+       false -> "fail"
+   end.
 
-auth( USER, PASS ) ->
-  L1 = dets:lookup( watch_dets, user ),
-  L2 = lists:filter(fun(X) -> {user,USER,PASS} =:= X end, L1),
-  case length( L2 ) > 0 of
-    true -> "ok";
-    false -> "fail"
-  end.
-
-setindex( USER, ITEM, VALUE ) ->
-  User = list_to_atom( "user_index_ets_" ++ USER ),
-  case dets:open_file( User,[{file, ?USER_PATH ++ USER ++"/index.dets" },{type,set},{auto_save,10}]) of
-    {ok,_} -> dets:insert(User, {ITEM, VALUE });
-    _ -> ok
-  end.
-
-%% get the item index from user
-getindex( USER, ITEM ) ->
-  User = list_to_atom( "user_index_ets_" ++ USER ),
-  case dets:open_file( User,[{file, ?USER_PATH ++ USER ++"/index.dets" },{type,set},{auto_save,10}]) of
-    { ok, _ } ->
-      case catch dets:lookup( User,ITEM ) of
-        { 'EXIT',_ } ->0;
-        [{ITEM,V}] -> V;
-        _ -> 0
-      end;
-    _ -> 0
-  end.
+setindex( USER, ITEM, VALUE ) -> watch_db:set_userindex( USER ++ "##" ++ ITEM, VALUE ).
+getindex( USER, ITEM ) -> watch_db:get_userindex( USER ++ "##" ++ ITEM ).
 
 mesg( USER, ITEM ) ->
   ID = getindex( USER,ITEM ),
-  
   lists:map( 
     fun(X) ->
        case re:split(X,"[*]",[{return,list}]) of
@@ -78,14 +53,13 @@ refresh() ->
          USER = list_to_atom( "user_list#"++ U ),
          case whereis( USER ) =:= undefined of
            true ->
-             file:make_dir( ?USER_PATH ++ U ),
              Pid = spawn(fun() -> stored(U,queue:new(),61) end),
              io:format("new ~p~n",[USER]),
              register( USER, Pid );
            false -> false
          end
       end,
-      dets:lookup( watch_dets, user )
+      watch_db:list_user()
   ),
   timer:sleep( 60000 ),
   refresh().

@@ -7,10 +7,11 @@
 -record(user,{name,passwd,info}).
 -record(relate,{item,user}).
 -record(follow,{owner,follower}).
+-record(userindex,{name,index}).
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex],20000).
 
 init() ->
     NodeList = [node()],
@@ -21,6 +22,7 @@ init() ->
     mnesia:create_table(user,[{attributes,record_info(fields,user)},{disc_copies, NodeList} ]),
     mnesia:create_table(relate,[{attributes,record_info(fields,relate)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(follow,[{attributes,record_info(fields,follow)},{disc_copies, NodeList},{type,bag} ]),
+    mnesia:create_table(userindex,[{attributes,record_info(fields,userindex)},{disc_copies, NodeList} ]),
     mnesia:stop().
 
 %% do =============================================================
@@ -29,6 +31,7 @@ do(Q) ->
     F = fun() -> qlc:e(Q) end,
     {atomic,Val} = mnesia:transaction(F),
     Val.
+
 
 %% item ===================================================
 get_item() ->
@@ -46,8 +49,13 @@ set_item(Name,Index) ->
     F = fun() -> mnesia:write(Row) end,
     mnesia:transaction(F).
 
+del_item(Name) ->
+    F = fun() -> mnesia:delete({item,Name}) end,
+    mnesia:transaction(F).
+
 list_item() ->
     do(qlc:q([X#item.name || X <- mnesia:table(item)])).
+
 
 %% user =====================================================
 set_user(Name,Passwd,Info) ->
@@ -80,8 +88,16 @@ get_user(NAME) ->
 get_user_info(NAME) ->
     do(qlc:q([ X#user.info || X <- mnesia:table(user), X#user.name == NAME ])).
 
+get_user_passwd(NAME) ->
+    do(qlc:q([ X#user.passwd || X <- mnesia:table(user), X#user.name == NAME ])).
+
+del_user(Name) ->
+    F = fun() -> mnesia:delete({user,Name}) end,
+    mnesia:transaction(F).
+
 list_user() ->
     do(qlc:q([X#user.name || X <- mnesia:table(user)])).
+
 
 %% relate  ====================================================
 add_relate(Item,User) ->
@@ -93,15 +109,38 @@ del_relate(Item,User) ->
     mnesia:transaction(F).
 
 list_relate() ->
-    do(qlc:q([X || X <- mnesia:table(relate)])).
+    do(qlc:q([{X#relate.item, X#relate.user} || X <- mnesia:table(relate)])).
+
+list_relate(User) ->
+    do(qlc:q([X#relate.item || X <- mnesia:table(relate), X#relate.user == User])).
+
 
 %%follow =======================================================
 add_follow(Owner,Follower) ->
     Row = #follow{owner = Owner,follower = Follower},
     F = fun() -> mnesia:write(Row) end,
     mnesia:transaction(F).
+
 del_follow(Owner,Follower) ->
     F = fun() -> mnesia:delete_object( #follow{ owner = Owner,follower = Follower } ) end,
     mnesia:transaction(F).
+
 list_follow() ->
-    do(qlc:q([X || X <- mnesia:table(follow)])).
+    do(qlc:q([{X#follow.owner, X#follow.follower} || X <- mnesia:table(follow)])).
+
+list_follow(Follower) ->
+    do(qlc:q([X#follow.owner || X <- mnesia:table(follow), X#follow.follower == Follower])).
+
+
+%% userindex ===================================================
+get_userindex(Name) ->
+    List = do(qlc:q([X || X <- mnesia:table(userindex), X#userindex.name == Name ])),
+    case length(List) == 1 of
+      true -> [{_,_,I}] = List, I;
+      false -> 0
+    end.
+
+set_userindex(Name,Index) ->
+    F = fun() -> mnesia:write( #userindex{name = Name,index = Index} ) end,
+    mnesia:transaction(F).
+
