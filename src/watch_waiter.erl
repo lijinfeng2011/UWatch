@@ -29,10 +29,6 @@ handle_client(Socket) ->
     {ok, "data"} -> 
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
-    {ok, "data\n"} -> 
-        gen_tcp:send( Socket, "data modle" ),
-        handle_item(Socket);
- 
     {ok, Data} ->
         case string:tokens( Data, " /" ) of
             ["GET","relate","add",ITEM,USER|_] -> 
@@ -67,6 +63,8 @@ handle_client(Socket) ->
               , ok( Socket );
             ["GET","follow","list"|_] -> ok( Socket, watch_follow:list() );
             ["GET","follow","list4follower",Follower|_]  -> ok( Socket, watch_follow:list(Follower) );
+
+            ["GET","stat","list"|_]           -> ok( Socket, watch_stat:list() );
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )
@@ -80,7 +78,7 @@ handle_item( Socket ) ->
     {ok, Data} ->
        lists:map( fun(X) -> waiter_manager ! {X} end, string:tokens( Data, "\n" ) ),
        handle_item( Socket );
-    {error, closed} -> io:format( "close~p" ), gen_tcp:close( Socket )
+    {error, closed} -> io:format( "close~n" ), gen_tcp:close( Socket )
   end.
 
 manage() ->
@@ -94,7 +92,7 @@ manage() ->
                  true ->
                   NAME = list_to_atom( "item_list#"++ ITEM ),
                   try
-                      NAME ! { "data", string:join(D, "#") }
+                      NAME ! { "data", string:join(D,"#") }
                   catch
                       error:badarg -> watch_item:add(ITEM)
                   end;

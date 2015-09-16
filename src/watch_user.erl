@@ -25,11 +25,11 @@ auth(User,Passwd) ->
        false -> "fail"
    end.
 
-setindex( USER, ITEM, VALUE ) -> watch_db:set_userindex( USER ++ "##" ++ ITEM, VALUE ).
-getindex( USER, ITEM ) -> watch_db:get_userindex( USER ++ "##" ++ ITEM ).
+setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, Index ).
+getindex( User, Item )        -> watch_db:get_userindex( User ++ "##" ++ Item ).
 
-mesg( USER, ITEM ) ->
-  ID = getindex( USER,ITEM ),
+mesg( User, Item ) ->
+  Id = getindex( User,Item ),
   lists:map( 
     fun(X) ->
        case re:split(X,"[*]",[{return,list}]) of
@@ -38,14 +38,14 @@ mesg( USER, ITEM ) ->
              {'EXIT',_} -> "0" ++ X;
              I ->
                if 
-                 I > ID -> setindex( USER,ITEM, I ), "1" ++ X;
+                 I > Id -> setindex( User,Item, I ), "1" ++ X;
                  true -> "0" ++ X
                end
            end;
          _ -> "0" ++ X
        end
     end,
-  watch_item:disk_log( ITEM, "mesg" )).
+  watch_item:disk_log( Item, "mesg" )).
 
 refresh() ->
   lists:map(
@@ -53,10 +53,10 @@ refresh() ->
          USER = list_to_atom( "user_list#"++ U ),
          case whereis( USER ) =:= undefined of
            true ->
-             Pid = spawn(fun() -> stored(U,queue:new(),61) end),
+             Pid = spawn(fun() -> stored(U) end),
              io:format("new ~p~n",[USER]),
              register( USER, Pid );
-           false -> false
+           false -> USER ! { check }
          end
       end,
       watch_db:list_user()
@@ -65,38 +65,8 @@ refresh() ->
   refresh().
 
 
-stored( NAME, Queue, TIME ) ->
+stored( NAME ) ->
   receive
-    { ITEM, Data } -> 
-       TmpQueue = queue:in( { ITEM, Data }, Queue ),
-       {_,M,_} = time(),
-       case M == TIME of
-           false -> 
-             Mesg = binary_to_list(list_to_binary(queue:to_list( TmpQueue ))),
-        try
-            mesg_manager ! { "mesg", NAME, Mesg }
-        catch
-            error:badarg -> io:fwrite( "user:~p send:~p to mesg_manager fail~n", [ NAME, Mesg ] )
-        end,
- 
-             NewTIME = M, NewQueue = queue:new();
-           true -> NewTIME = TIME, NewQueue = TmpQueue
-       end;
-     true -> NewTIME = TIME, NewQueue = Queue
-  after 3000 ->
-    {_,M,_} = time(),
-    case M == TIME of
-      false ->
-        Mesg = string:join(queue:to_list( Queue ), "#-cut-#" ),
-        try
-            mesg_manager ! { "mesg", NAME, Mesg }
-        catch
-            error:badarg -> io:fwrite( "user:~p send:~p to mesg_manager fail~n", [ NAME, Mesg ] )
-        end,
- 
-        NewTIME = M, NewQueue = queue:new();
-      true ->
-          NewTIME = TIME, NewQueue = Queue
-    end
+    { check } -> io:format( "user ~p~n",[NAME])
   end,
-  stored( NAME, NewQueue, NewTIME ).
+  stored( NAME ).

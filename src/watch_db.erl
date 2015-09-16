@@ -8,10 +8,11 @@
 -record(relate,{item,user}).
 -record(follow,{owner,follower}).
 -record(userindex,{name,index}).
+-record(stat,{name,stat}).
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat],20000).
 
 init() ->
     NodeList = [node()],
@@ -23,6 +24,7 @@ init() ->
     mnesia:create_table(relate,[{attributes,record_info(fields,relate)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(follow,[{attributes,record_info(fields,follow)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(userindex,[{attributes,record_info(fields,userindex)},{disc_copies, NodeList} ]),
+    mnesia:create_table(stat,[{attributes,record_info(fields,stat)},{disc_copies, NodeList} ]),
     mnesia:stop().
 
 %% do =============================================================
@@ -143,4 +145,21 @@ get_userindex(Name) ->
 set_userindex(Name,Index) ->
     F = fun() -> mnesia:write( #userindex{name = Name,index = Index} ) end,
     mnesia:transaction(F).
+
+%% stat ========================================================
+get_stat(Name) ->
+    List = do(qlc:q([X || X <- mnesia:table(item), X#item.name == Name ])),
+    case length(List) == 1 of
+      true -> [{_,_,I}] = List, I;
+      false -> ""
+    end.
+
+set_stat(Name,Stat) ->
+    Row = #stat{name = Name,stat = Stat},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+list_stat() ->
+    do(qlc:q([ { X#stat.name, X#stat.stat } || X <- mnesia:table(stat)])).
+
 
