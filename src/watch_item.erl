@@ -5,7 +5,7 @@
 -define(ITEM_PATH,"../data/item/").
 -define(STAT_TIME,[1,5,15]).
 -define(ITEM_DATA_SIZE,65536).
--define(ITEM_DATA_COUNT,65536).
+-define(ITEM_DATA_COUNT,3).
 
 start() -> 
   spawn( fun() -> mon() end ),
@@ -26,7 +26,6 @@ getindex( ITEM ) -> watch_db:get_item(ITEM).
 mon() ->
   lists:map( 
       fun(X) ->
-         io:format("start item:~p~n",[X]),
          ITEM = list_to_atom( "item_list#"++ X ), 
          case whereis( ITEM ) =:= undefined of
            true -> 
@@ -38,9 +37,9 @@ mon() ->
                       Index = watch_db:get_item(X) + 1,
                       Pid = spawn(fun() -> stored(X,MLog, CLog,queue:new(),Index,queue:new()) end),
                       register( ITEM, Pid );
-                     _ -> io:format( "err~n" ), watch_disk_log:close(MLog)
+                     _ -> io:format( "start item:~p err~n", [ X] ), watch_disk_log:close(MLog)
                   end;
-               _ -> io:format( "err~n" )
+               _ -> io:format( "start item:~p err~n", [ X] )
              end;
            false -> false
          end
@@ -54,13 +53,14 @@ mon() ->
 cut() ->
   timer:sleep( 60000 ),
   {{Y,M,D},{H,Mi,_}} = calendar:local_time(),
+  Msec = watch_misc:milliseconds(),
   TIME = lists:concat( [ Y,"-",M,"-",D,"-",H,"-",Mi ] ),
   lists:map( 
       fun(X) ->
          ITEM = list_to_atom( "item_list#"++ X ), 
          case whereis( ITEM ) =:= undefined of
            true -> true;
-           false -> ITEM ! { cut,TIME }
+           false -> ITEM ! { cut,TIME, Msec }
          end
       end,
       watch_db:list_item()
@@ -74,7 +74,7 @@ stored(NAME,MLog,CLog,Q,Index,Stat) ->
         watch_disk_log:write(MLog,"*"++integer_to_list(Index)++"*"++Data),
         NewIndex = Index +1,
         NewStat = Stat;
-    { cut,TIME } -> 
+    { cut,TIME, Msec } -> 
         NewQ = queue:new(),
         disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(queue:len(Q)) ),
         NewIndex = Index,
@@ -84,7 +84,8 @@ stored(NAME,MLog,CLog,Q,Index,Stat) ->
             true -> {_,NewStat} = queue:out(TmpStat);
             false -> NewStat = TmpStat
         end,
-        watch_db:set_stat(NAME,queue_to_stat(NewStat));
+        watch_db:set_stat(NAME,queue_to_stat(NewStat)),
+        watch_db:set_last("item#"++NAME,Msec);
       true -> NewQ = Q, NewIndex = Index,NewStat = Stat
   end,
   stored(NAME,MLog,CLog,NewQ,NewIndex,NewStat).
