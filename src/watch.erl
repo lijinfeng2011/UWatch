@@ -11,7 +11,7 @@ start(Port) ->
   watch_db:init(),
   watch_db:start(),
 
-  watch_notify:start(),
+%%  watch_notify:start(),
 
   watch_item:start(),
   watch_user:start(),

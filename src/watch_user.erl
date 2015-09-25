@@ -100,7 +100,7 @@ stored(NAME) ->
                             ItemList ),
 
                case length(AlarmList) > 0 of
-                   true -> watch_notify ! {NAME,AlarmList};
+                   true -> watch_notify:notify( NAME,AlarmList );
                    false -> false      
                end,
                watch_db:set_last("user#"++NAME, Time);

@@ -8,11 +8,13 @@
 -record(relate,{item,user}).
 -record(follow,{owner,follower}).
 -record(userindex,{name,index}).
--record(stat,{name,stat}).
+-record(stat,{name,stat}). %% item 的状态 1/1/_
+-record(last,{name,time}). %% item 最后出现错误的时间 和user最后处理的错误时间
+-record(alarm,{name,seed,main}). 
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm],20000).
 
 init() ->
     NodeList = [node()],
@@ -25,6 +27,8 @@ init() ->
     mnesia:create_table(follow,[{attributes,record_info(fields,follow)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(userindex,[{attributes,record_info(fields,userindex)},{disc_copies, NodeList} ]),
     mnesia:create_table(stat,[{attributes,record_info(fields,stat)},{disc_copies, NodeList} ]),
+    mnesia:create_table(last,[{attributes,record_info(fields,last)},{disc_copies, NodeList} ]),
+    mnesia:create_table(alarm,[{attributes,record_info(fields,alarm)},{disc_copies, NodeList} ]),
     mnesia:stop().
 
 %% do =============================================================
@@ -161,5 +165,21 @@ set_stat(Name,Stat) ->
 
 list_stat() ->
     do(qlc:q([ { X#stat.name, X#stat.stat } || X <- mnesia:table(stat)])).
+
+%% last ========================================================
+get_last(Name) ->
+    List = do(qlc:q([X || X <- mnesia:table(last), X#last.name == Name ])),
+    case length(List) == 1 of
+      true -> [{_,_,I}] = List, I;
+      false -> 0
+    end.
+
+set_last(Name,Time) ->
+    Row = #last{name = Name,time = Time},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+list_last() ->
+    do(qlc:q([ { X#last.name, X#last.time } || X <- mnesia:table(last)])).
 
 
