@@ -16,6 +16,7 @@ do_accept(LSocket) ->
   {ok, {IP_Address,_}} = inet:peername(Socket),
   case watch_auth:check_ip( IP_Address ) of
     true -> 
+      io:format("[WARM] wolcome:~p~n", [ IP_Address ] ),
       spawn(fun() -> handle_client(Socket) end);
     false ->
       io:format("[WARM] IP_Address:~p deny~n", [ IP_Address ] ),
@@ -50,6 +51,8 @@ handle_client(Socket) ->
             ["GET","user","del", USER|_]        -> watch_user:del(USER), ok( Socket );
             ["GET","user","list"|_]           -> ok( Socket, watch_user:list() );
             ["GET","user","mesg",USER,ITEM|_]     -> ok( Socket, watch_user:mesg(USER,ITEM) );
+            ["GET","user","getinfo",USER|_]      -> ok( Socket, [ watch_user:getinfo(USER) ] );
+            ["GET","user","setinfo",USER,INFO|_] -> watch_user:setinfo(USER,INFO), ok( Socket );
             ["GET","user","auth",USER,PASS|_] -> 
                gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), gen_tcp:close( Socket );
 
@@ -65,6 +68,7 @@ handle_client(Socket) ->
             ["GET","follow","list4follower",Follower|_]  -> ok( Socket, watch_follow:list(Follower) );
 
             ["GET","stat","list"|_]           -> ok( Socket, watch_stat:list() );
+            ["GET","last","list"|_]           -> ok( Socket, watch_last:list() );
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )

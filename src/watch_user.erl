@@ -1,5 +1,5 @@
 -module(watch_user).
--export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,mesg/2,getinterval/1]).
+-export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,getinterval/1]).
 
 -define(INTERVAL, 60).
 
@@ -29,6 +29,9 @@ auth(User,Passwd) ->
 
 setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, Index ).
 getindex( User, Item )        -> watch_db:get_userindex( User ++ "##" ++ Item ).
+
+setinfo( User, Info )  -> watch_db:set_user_info( User, Info ).
+getinfo( User )        -> watch_db:get_user_info( User ).
 
 getinterval( User ) ->
   [Info] = watch_db:get_user_info(User),
