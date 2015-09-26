@@ -12,16 +12,23 @@ start(Port) ->
   do_accept(LSocket).
 
 do_accept(LSocket) ->
-  {ok, Socket} = gen_tcp:accept(LSocket),
-  {ok, {IP_Address,_}} = inet:peername(Socket),
-  case watch_auth:check_ip( IP_Address ) of
-    true -> 
-      io:format("[WARM] wolcome:~p~n", [ IP_Address ] ),
-      spawn(fun() -> handle_client(Socket) end);
-    false ->
-      io:format("[WARM] IP_Address:~p deny~n", [ IP_Address ] ),
-      gen_tcp:send( Socket, "deny" ),
-      gen_tcp:close( Socket )
+  case gen_tcp:accept(LSocket) of
+      {ok, Socket} ->
+ 
+          case inet:peername(Socket) of 
+              {ok, {Address,_}} -> IP_Address = Address;
+              _ -> IP_Address = '0.0.0.0'
+          end,
+          case watch_auth:check_ip( IP_Address ) of
+            true -> 
+              io:format("[WARM] wolcome:~p~n", [ IP_Address ] ),
+              spawn(fun() -> handle_client(Socket) end);
+            false ->
+              io:format("[WARM] IP_Address:~p deny~n", [ IP_Address ] ),
+              gen_tcp:send( Socket, "deny" ),
+              gen_tcp:close( Socket )
+       end;
+       {error, Reason} -> io:format( "~p~n", Reason )
    end,
    do_accept(LSocket).
 
