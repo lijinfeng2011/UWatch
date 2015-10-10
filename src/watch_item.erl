@@ -6,6 +6,7 @@
 -define(STAT_TIME,[1,5,15]).
 -define(ITEM_DATA_SIZE,65536).
 -define(ITEM_DATA_COUNT,3).
+-define(ITEM_MAX_QCOUNT,100).
 
 start() -> 
   spawn( fun() -> mon() end ),
@@ -80,12 +81,15 @@ stored(NAME,MLog,CLog,Q,Index,Stat) ->
         NewIndex = Index,
         setindex(NAME,Index),
         TmpStat = queue:in(queue:len(Q),Stat),
-        case queue:len(TmpStat) > 15 of
+        case queue:len(TmpStat) > ?ITEM_MAX_QCOUNT of
             true -> {_,NewStat} = queue:out(TmpStat);
             false -> NewStat = TmpStat
         end,
         watch_db:set_stat(NAME,queue_to_stat(NewStat)),
-        watch_db:set_last("item#"++NAME,Msec);
+        case item_alarm(NAME,NewQ) of
+            true ->  watch_db:set_last("item#"++NAME,Msec);
+            false -> false
+        end;
       true -> NewQ = Q, NewIndex = Index,NewStat = Stat
   end,
   stored(NAME,MLog,CLog,NewQ,NewIndex,NewStat).
@@ -109,3 +113,31 @@ queue_sum(Q,Count,E) ->
         end;
     _ -> error
   end.
+
+get_item_alarm_conf(Item) -> {1,1}.
+
+item_alarm(Item,Q) ->
+  {A,B} = get_item_alarm_conf(Item),
+  case queue_count(Q,B) of
+    error -> V = 0;
+    VV -> V = VV
+  end,
+  A >= V.
+
+
+queue_count(Q,Count) -> queue_count(Q,Count,0).
+queue_count(Q,Count,E) ->
+  case queue:out(Q) of
+    {{value,V},Q2} ->
+        case V > 0 of
+           true -> VV = 1;
+           false -> VV = 0
+        end,
+        case Count == 1 of
+            true -> VV+E;
+            false -> queue_count(Q2,Count-1,E+VV)
+        end;
+    _ -> error
+  end.
+
+

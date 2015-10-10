@@ -88,8 +88,9 @@ stored(NAME) ->
     { check, Time } -> 
         UserMsec = watch_db:get_last("user#"++NAME),
         UserInterval = watch_user:getinterval(NAME),
+        io:format( "user~pcheck~p:~p:~p~n",[NAME, UserMsec, UserInterval, Time]),
      
-        case UserMsec + UserInterval > Time of
+        case UserMsec + UserInterval < Time of
             true ->
                 ItemList = watch_relate:list4user_itemnameonly(NAME),
                 AlarmList = lists:filter(
@@ -100,10 +101,10 @@ stored(NAME) ->
                             ItemList ),
 
                case length(AlarmList) > 0 of
-                   true -> watch_notify:notify( NAME,AlarmList );
+                   true -> watch_notify:notify( NAME,AlarmList ),
+                           watch_db:set_last("user#"++NAME, Time);
                    false -> false      
-               end,
-               watch_db:set_last("user#"++NAME, Time);
+               end;
             false -> fase
         end
         
