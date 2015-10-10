@@ -66,18 +66,20 @@ handle_client(Socket) ->
 
             ["follow","add",Owner,Follower] -> 
               lists:foreach( 
-                fun(X) -> watch_follow:add(X,Follower) end,string:tokens( Owner, ":" ))
-              , ok( Socket );
+                fun(X) -> watch_follow:add(X,Follower) end,string:tokens( Owner, ":" )),
+                ok( Socket );
             ["follow","del",Owner,Follower] -> 
               lists:foreach( 
-                fun(X) -> watch_follow:del(X,Follower) end,string:tokens( Owner, ":" ))
-              , ok( Socket );
+                fun(X) -> watch_follow:del(X,Follower) end,string:tokens( Owner, ":" )),
+                ok( Socket );
             ["follow","update",Owner,Follower] -> watch_follow:update(Owner, Follower), ok( Socket );
+            ["follow","del4user",Owner] -> watch_follow:del4user(Owner), ok( Socket );
             ["follow","list"] -> ok( Socket, watch_follow:list() );
             ["follow","list4user",USER] -> ok( Socket, watch_follow:list(USER) );
 
             ["stat","list"] -> ok( Socket, watch_stat:list() );
             ["last","list"] -> ok( Socket, watch_last:list() );
+
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )

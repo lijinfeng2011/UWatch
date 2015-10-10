@@ -131,6 +131,10 @@ del_follow(Owner,Follower) ->
     F = fun() -> mnesia:delete_object( #follow{ owner = Owner,follower = Follower } ) end,
     mnesia:transaction(F).
 
+del4user_follow(Owner) ->
+    F = fun() -> mnesia:delete({follow, Owner}) end,
+    mnesia:transaction(F). 
+
 update_follow(Owner,Follower) ->
     F = fun() ->
         mnesia:delete({follow, Owner}),
