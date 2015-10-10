@@ -71,6 +71,7 @@ handle_client(Socket) ->
               lists:foreach( 
                 fun(X) -> watch_follow:del(X,Follower) end,string:tokens( Owner, ":" ))
               , ok( Socket );
+            ["GET","follow","update",Owner,Follower|_] -> watch_follow:update(Owner, Follower), ok( Socket );
             ["GET","follow","list"|_] -> ok( Socket, watch_follow:list() );
             ["GET","follow","list4follower",Follower|_]  -> ok( Socket, watch_follow:list(Follower) );
 

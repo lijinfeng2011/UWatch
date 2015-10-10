@@ -131,6 +131,14 @@ del_follow(Owner,Follower) ->
     F = fun() -> mnesia:delete_object( #follow{ owner = Owner,follower = Follower } ) end,
     mnesia:transaction(F).
 
+update_follow(Owner,Follower) ->
+    F = fun() ->
+        mnesia:delete({follow, Owner}),
+        Add = fun(Follow) -> mnesia:write( #follow{owner = Owner,follower = Follow} ) end,
+        lists:foreach(Add, string:tokens(Follower, ":" ))
+    end,
+    mnesia:transaction(F).
+
 list_follow() ->
     do(qlc:q([{X#follow.owner, X#follow.follower} || X <- mnesia:table(follow)])).
 
