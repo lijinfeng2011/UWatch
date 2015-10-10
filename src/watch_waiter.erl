@@ -73,7 +73,7 @@ handle_client(Socket) ->
               , ok( Socket );
             ["GET","follow","update",Owner,Follower|_] -> watch_follow:update(Owner, Follower), ok( Socket );
             ["GET","follow","list"|_] -> ok( Socket, watch_follow:list() );
-            ["GET","follow","list4follower",Follower|_]  -> ok( Socket, watch_follow:list(Follower) );
+            ["GET","follow","list4user",USER|_]  -> ok( Socket, watch_follow:list(USER) );
 
             ["GET","stat","list"|_]           -> ok( Socket, watch_stat:list() );
             ["GET","last","list"|_]           -> ok( Socket, watch_last:list() );

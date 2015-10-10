@@ -6,4 +6,4 @@ del(Owner,Follower)     -> watch_db:del_follow(Owner,Follower).
 update(Owner, Follower) -> watch_db:update_follow(Owner, Follower).
 
 list() -> lists:map( fun(X) -> {I,U} = X, I++ ":" ++ U end, watch_db:list_follow()).
-list(Follower) -> watch_db:list_follow(Follower).
+list(USER) -> watch_db:list_follow(USER).

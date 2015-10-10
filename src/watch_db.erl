@@ -142,8 +142,8 @@ update_follow(Owner,Follower) ->
 list_follow() ->
     do(qlc:q([{X#follow.owner, X#follow.follower} || X <- mnesia:table(follow)])).
 
-list_follow(Follower) ->
-    do(qlc:q([X#follow.owner || X <- mnesia:table(follow), X#follow.follower == Follower])).
+list_follow(USER) ->
+    do(qlc:q([X#follow.follower || X <- mnesia:table(follow), X#follow.owner == USER])).
 
 
 %% userindex ===================================================
