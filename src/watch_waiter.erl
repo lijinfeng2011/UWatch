@@ -37,46 +37,47 @@ handle_client(Socket) ->
     {ok, "data"} -> 
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
-    {ok, Data} ->
-        case string:tokens( Data, " /" ) of
-            ["GET","relate","add",ITEM,USER|_] -> 
+    {ok, Data} -> 
+         [_,DATA|_] = string:tokens( Data, " " ),
+        case string:tokens( DATA, "/" ) of
+            ["relate","add",ITEM,USER] -> 
               lists:foreach( fun(X) -> watch_relate:add(X,USER) end,string:tokens( ITEM, ":" ) ), ok( Socket );
-            ["GET","relate","del",ITEM,USER|_] ->
+            ["relate","del",ITEM,USER] ->
               lists:foreach( fun(X) -> watch_relate:del(X,USER) end,string:tokens( ITEM, ":" ) ), ok( Socket );
-            ["GET","relate","list"|_]  ->
+            ["relate","list"] ->
                ok( Socket, lists:map( fun(X) -> {I,U} = X, I++ ":" ++ U end,watch_relate:list()));
-            ["GET","relate","list4user",USER|_]  ->
+            ["relate","list4user",USER]  ->
                ok( Socket, watch_relate:list4user(USER) );
 
-            ["GET", "item","add",ITEM|_]     -> watch_item:add(ITEM), ok( Socket );
-            ["GET", "item","del",ITEM|_]     -> watch_item:del(ITEM), ok( Socket );
-            ["GET", "item","list"| _]        -> ok( Socket, watch_item:list() );
-            ["GET", "item","mesg",ITEM|_]  -> ok( Socket, watch_item:disk_log(ITEM, "mesg" ) );
-            ["GET", "item","count",ITEM|_] -> ok( Socket, watch_item:disk_log(ITEM, "count" ) );
+            ["item","add",ITEM]     -> watch_item:add(ITEM), ok( Socket );
+            ["item","del",ITEM]     -> watch_item:del(ITEM), ok( Socket );
+            ["item","list"]         -> ok( Socket, watch_item:list() );
+            ["item","mesg",ITEM]    -> ok( Socket, watch_item:disk_log(ITEM, "mesg" ) );
+            ["item","count",ITEM]   -> ok( Socket, watch_item:disk_log(ITEM, "count" ) );
 
-            ["GET","user","add",USER,PASS|_]  -> watch_user:add(USER, PASS ),ok( Socket );
-            ["GET","user","del", USER|_]        -> watch_user:del(USER), ok( Socket );
-            ["GET","user","list"|_]           -> ok( Socket, watch_user:list() );
-            ["GET","user","mesg",USER,ITEM|_]     -> ok( Socket, watch_user:mesg(USER,ITEM) );
-            ["GET","user","getinfo",USER|_]      -> ok( Socket, [ watch_user:getinfo(USER) ] );
-            ["GET","user","setinfo",USER,INFO|_] -> watch_user:setinfo(USER,INFO), ok( Socket );
-            ["GET","user","auth",USER,PASS|_] -> 
+            ["user","add",USER,PASS]     -> watch_user:add(USER, PASS ),ok( Socket );
+            ["user","del", USER]         -> watch_user:del(USER), ok( Socket );
+            ["user","list"]              -> ok( Socket, watch_user:list() );
+            ["user","mesg",USER,ITEM]    -> ok( Socket, watch_user:mesg(USER,ITEM) );
+            ["user","getinfo",USER]      -> ok( Socket, [ watch_user:getinfo(USER) ] );
+            ["user","setinfo",USER,INFO] -> watch_user:setinfo(USER,INFO), ok( Socket );
+            ["user","auth",USER,PASS]    -> 
                gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), gen_tcp:close( Socket );
 
-            ["GET","follow","add",Owner,Follower|_] -> 
+            ["follow","add",Owner,Follower] -> 
               lists:foreach( 
                 fun(X) -> watch_follow:add(X,Follower) end,string:tokens( Owner, ":" ))
               , ok( Socket );
-            ["GET","follow","del",Owner,Follower|_] -> 
+            ["follow","del",Owner,Follower] -> 
               lists:foreach( 
                 fun(X) -> watch_follow:del(X,Follower) end,string:tokens( Owner, ":" ))
               , ok( Socket );
-            ["GET","follow","update",Owner,Follower|_] -> watch_follow:update(Owner, Follower), ok( Socket );
-            ["GET","follow","list"|_] -> ok( Socket, watch_follow:list() );
-            ["GET","follow","list4user",USER|_]  -> ok( Socket, watch_follow:list(USER) );
+            ["follow","update",Owner,Follower] -> watch_follow:update(Owner, Follower), ok( Socket );
+            ["follow","list"] -> ok( Socket, watch_follow:list() );
+            ["follow","list4user",USER] -> ok( Socket, watch_follow:list(USER) );
 
-            ["GET","stat","list"|_]           -> ok( Socket, watch_stat:list() );
-            ["GET","last","list"|_]           -> ok( Socket, watch_last:list() );
+            ["stat","list"] -> ok( Socket, watch_stat:list() );
+            ["last","list"] -> ok( Socket, watch_last:list() );
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )
