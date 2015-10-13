@@ -37,7 +37,13 @@ stored(Log) ->
 notify( User, AlarmList ) ->
     inets:start(),
     ssl:start(),
-    AlarmList2 = lists:map( fun(X) -> X ++ ":"++ watch_db:get_stat(X) end, AlarmList),
+    AlarmList2 = lists:map( 
+        fun(X) -> 
+            PubIndex = watch_item:getindex(X),
+            PriIndex = watch_user:getindex(User,X),
+            X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ) 
+        end, 
+    AlarmList),
     Info = string:join( AlarmList2, "@" ),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
       [],"application/x-www-form-urlencoded", lists:concat(["user=" ,User ,"&info=",Info])},[],[]) of
