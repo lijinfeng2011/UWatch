@@ -35,7 +35,7 @@ mon() ->
                {ok, MLog} ->
                   case watch_disk_log:open( ?ITEM_PATH ++ X ++ "/count", ?ITEM_DATA_SIZE, ?ITEM_DATA_COUNT) of
                     {ok, CLog} ->
-                      Index = watch_db:get_item(X) + 1,
+                      Index = watch_db:get_item(X),
                       Pid = spawn(fun() -> stored(X,MLog, CLog,queue:new(),Index,queue:new()) end),
                       register( ITEM, Pid );
                      _ -> io:format( "start item:~p err~n", [ X] ), watch_disk_log:close(MLog)
@@ -72,14 +72,14 @@ stored(NAME,MLog,CLog,Q,Index,Stat) ->
   receive
     { "data", Data } ->
         NewQ = queue:in(Data,Q),
-        watch_disk_log:write(MLog,"*"++integer_to_list(Index)++"*"++Data),
         NewIndex = Index +1,
+        watch_disk_log:write(MLog,"*"++integer_to_list(NewIndex)++"*"++Data),
         NewStat = Stat;
     { cut,TIME, Msec } -> 
         NewQ = queue:new(),
         disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(queue:len(Q)) ),
         NewIndex = Index,
-        setindex(NAME,Index),
+%        setindex(NAME,Index),
         TmpStat = queue:in(queue:len(Q),Stat),
         case queue:len(TmpStat) > ?ITEM_MAX_QCOUNT of
             true -> {_,NewStat} = queue:out(TmpStat);
@@ -92,6 +92,7 @@ stored(NAME,MLog,CLog,Q,Index,Stat) ->
         end;
       true -> NewQ = Q, NewIndex = Index,NewStat = Stat
   end,
+  setindex(NAME,NewIndex),
   stored(NAME,MLog,CLog,NewQ,NewIndex,NewStat).
 
 queue_to_stat(Q) ->

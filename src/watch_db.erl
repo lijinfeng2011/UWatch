@@ -164,7 +164,7 @@ set_userindex(Name,Index) ->
 
 %% stat ========================================================
 get_stat(Name) ->
-    List = do(qlc:q([X || X <- mnesia:table(item), X#item.name == Name ])),
+    List = do(qlc:q([X || X <- mnesia:table(stat), X#item.name == Name ])),
     case length(List) == 1 of
       true -> [{_,_,I}] = List, I;
       false -> ""

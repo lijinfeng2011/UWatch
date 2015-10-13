@@ -37,7 +37,7 @@ handle_client(Socket) ->
     {ok, "data"} -> 
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
-    {ok, Data} -> 
+    {ok, Data} ->
          [_,DATA|_] = string:tokens( Data, " " ),
         case string:tokens( DATA, "/" ) of
             ["relate","add",ITEM,USER] -> 
@@ -61,14 +61,11 @@ handle_client(Socket) ->
             ["user","mesg",USER,ITEM]    -> ok( Socket, watch_user:mesg(USER,ITEM) );
             ["user","getinfo",USER]      -> ok( Socket, [ watch_user:getinfo(USER) ] );
             ["user","setinfo",USER,INFO] -> watch_user:setinfo(USER,INFO), ok( Socket );
-            ["user","getindex",USER,ITEM]-> 
-
-ok( Socket, [integer_to_list( watch_user:getindex(USER,ITEM)) ] ), 
-io:format("sssssssssssssssssssss~n"),
-io:format( "XX:~p~n", [integer_to_list( watch_user:getindex(USER,ITEM)) ]  );
-            ["user","setindex",USER,ITEM,ID] -> watch_user:setindex(USER,ITEM,list_to_integer(ID)), ok( Socket );
-            ["user","auth",USER,PASS]    -> 
+            ["user","getindex",USER,ITEM]-> ok( Socket, [integer_to_list( watch_user:getindex(USER,ITEM)) ] );
+            ["user","setindex",USER,ITEM,ID]  -> watch_user:setindex(USER,ITEM,list_to_integer(ID)), ok( Socket );
+            ["user","auth",USER,PASS]         -> 
                gen_tcp:send( Socket, watch_user:auth(USER,PASS) ), gen_tcp:close( Socket );
+            ["user","changepwd",USER,OLD,NEW] -> ok( Socket, [watch_user:changepwd(USER,OLD,NEW)] );
 
             ["follow","add",Owner,Follower] -> 
               lists:foreach( 

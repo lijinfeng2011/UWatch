@@ -1,5 +1,5 @@
 -module(watch_user).
--export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,getinterval/1]).
+-export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,getinterval/1,changepwd/3]).
 
 -define(INTERVAL, 60).
 
@@ -26,6 +26,16 @@ auth(User,Passwd) ->
            end;
        false -> "fail"
    end.
+
+changepwd(User, OldPwd, NewPwd) ->
+  case auth(User, OldPwd) of
+    "ok" ->
+      case watch_db:set_user_passwd(User, NewPwd) of
+        { error } -> "set failed";
+         _        -> "success"
+      end;
+    "fail" -> "auth failed"
+  end.
 
 setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, Index ).
 getindex( User, Item )        -> watch_db:get_userindex( User ++ "##" ++ Item ).
