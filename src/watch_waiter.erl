@@ -83,6 +83,16 @@ handle_client(Socket) ->
             ["stat","list"] -> ok( Socket, watch_stat:list() );
             ["last","list"] -> ok( Socket, watch_last:list() );
 
+            ["filter","add",NAME,CONT] -> 
+              lists:foreach( fun(X) -> watch_filter:add(NAME,X) end,string:tokens( CONT, ":" ) ), ok( Socket );
+            ["filter","del",NAME,CONT] ->
+              lists:foreach( fun(X) -> watch_filter:del(NAME,X) end,string:tokens( CONT, ":" ) ), ok( Socket );
+            ["filter","list"] ->
+               ok( Socket, lists:map( fun(X) -> {N,C} = X, N++ ":" ++ C end,watch_filter:list()));
+            ["filter","list4name",NAME]  ->
+               ok( Socket, watch_filter:list4name(NAME) );
+
+
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )
