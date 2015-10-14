@@ -4,8 +4,11 @@
 -define(TCP_OPTIONS, [ list, {packet, 0}, {active, false}, {reuseaddr, true}]).
 
 start(Port) ->
-  Pid = spawn(fun() -> manage() end),
+  Pid = spawn(fun() -> manage([]) end),
   register(waiter_manager,Pid),
+
+  P = spawn(fun() -> filter() end),
+  register(waiter_filter,P),
 
   {ok, LSocket} = gen_tcp:listen(Port, ?TCP_OPTIONS),
   io:format("port:~w~n", [Port]),
@@ -104,32 +107,49 @@ handle_client(Socket) ->
 handle_item( Socket ) ->
   case gen_tcp:recv(Socket, 0) of
     {ok, Data} ->
-       lists:map( fun(X) -> waiter_manager ! {X} end, string:tokens( Data, "\n" ) ),
+       lists:map( fun(X) -> waiter_manager ! { data, X} end, string:tokens( Data, "\n" ) ),
        handle_item( Socket );
     {error, closed} -> io:format( "close~n" ), gen_tcp:close( Socket )
   end.
 
-manage() ->
+filter() ->
+  L = watch_filter:list4name("main"),
+  try
+    waiter_manager ! { filter, L}
+  catch
+    error:badarg -> io:format("send filter to main fail~n")
+  end,
+  timer:sleep(5000),
+  filter().
+
+manage(Filter) ->
   receive
-    { Data } ->
+    { filter, List } -> manage( List );
+    { data, Data } ->
       DATA = string:tokens(Data,"#"),
       case length(DATA) > 2 of
           true ->
               [ MARK, ITEM | D ] = DATA,
               case MARK == "@@" of
                  true ->
-                  NAME = list_to_atom( "item_list#"++ ITEM ),
-                  try
-                      NAME ! { "data", string:join(D,"#") }
-                  catch
-                      error:badarg -> watch_item:add(ITEM)
+                  DD = string:join(D,"#"),
+                  MATCH = lists:filter(fun(X) -> re:run(DD, X) /= nomatch end, Filter),
+                  case length( MATCH ) > 0 of
+                    true -> io:format("main filter:~p~n",[DD]);
+                    false ->
+                      NAME = list_to_atom( "item_list#"++ ITEM ),
+                      try
+                         NAME ! { "data", DD }
+                      catch
+                         error:badarg -> watch_item:add(ITEM)
+                      end
                   end;
                   false -> false
               end;
           false -> false
       end
   end,
-  manage().
+  manage(Filter).
 
 ok( Socket ) ->
   gen_tcp:send( Socket, "ok" ), gen_tcp:close( Socket ).
