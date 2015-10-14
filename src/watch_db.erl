@@ -209,6 +209,6 @@ del_filter(Name,Cont) ->
 list_filter() ->
     do(qlc:q([{X#filter.name, X#filter.cont} || X <- mnesia:table(filter)])).
 
-list_relate(Name) ->
-    do(qlc:q([X#filter.name || X <- mnesia:table(filter), X#filter.cont == Cont])).
+list_filter(Name) ->
+    do(qlc:q([X#filter.cont || X <- mnesia:table(filter), X#filter.name == Name])).
 
