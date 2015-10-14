@@ -11,10 +11,11 @@
 -record(stat,{name,stat}). %% item 的状态 1/1/_
 -record(last,{name,time}). %% item 最后出现错误的时间 和user最后处理的错误时间
 -record(alarm,{name,seed,main}). 
+-record(filter,{name,cont}). 
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter],20000).
 
 init() ->
     NodeList = [node()],
@@ -29,6 +30,7 @@ init() ->
     mnesia:create_table(stat,[{attributes,record_info(fields,stat)},{disc_copies, NodeList} ]),
     mnesia:create_table(last,[{attributes,record_info(fields,last)},{disc_copies, NodeList} ]),
     mnesia:create_table(alarm,[{attributes,record_info(fields,alarm)},{disc_copies, NodeList} ]),
+    mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:stop().
 
 %% do =============================================================
@@ -194,4 +196,19 @@ set_last(Name,Time) ->
 list_last() ->
     do(qlc:q([ { X#last.name, X#last.time } || X <- mnesia:table(last)])).
 
+
+%% filter ======================================================
+add_filter(Name,Cont) ->
+    Row = #filter{name = Name,cont = Cont},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+del_filter(Name,Cont) ->
+    F = fun() -> mnesia:delete_object( #filter{ name = Name, cont = Cont } ) end,
+    mnesia:transaction(F).
+
+list_filter() ->
+    do(qlc:q([{X#filter.name, X#filter.cont} || X <- mnesia:table(filter)])).
+
+list_relate(Name) ->
+    do(qlc:q([X#filter.name || X <- mnesia:table(filter), X#filter.cont == Cont])).
 
