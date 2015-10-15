@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
+    <link rel="stylesheet" href="/css/glance.css">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0">
+    <script src="/jquery.mobile-1.4.3/jquery.min.js"></script>
+    <script src="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.js"></script>
+    <script src="/javascripts/glance.min.js"></script>
+</head>
+
+<body>
+<div data-role="page" id="pageHomepage">
+  <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
+    <h1>报警订阅系统</h1>
+    <a href="/login" data-rel="dialog" data-icon="home" class="ui-btn-right">登录</a>
+  </div>
+
+  <div data-role="content">
+    <div id="Welcome" style="background-color:#fff9ea; margin-top:-15px; border-bottom: solid 1px #bac6d3;">
+      <div id="container" style="padding:20px 20px 0px 20px; text-align: center;">
+        <img src="/images/Logo.png" style="width:36px; height:36px">
+      </div>
+    </div>
+  </div>
+
+  <div style="margin: 10px 20px">
+     <div class="mesg-box">
+[% IF status == '1' %]
+           <p>登录服务器故障，请稍后再试!</p>
+[% ELSIF status == '2' %]
+           <p>用户名或者密码错误，请重新登录!</p>
+[% ELSE %]
+           <p>欢迎使用报警订阅系统!</p>
+           <p>注意: 使用前请先登录.</p>
+           <p>提示: 当前为使用版本, 欢迎你提取宝贵意见!</p>
+[% END %]
+     </div> 
+  </div>
+
+[% IF token %]
+    <input type="hidden" name='_token' value="[% token %]">
+[% END %]
+
+  <div data-role="footer" data-position="fixed" data-id="main-tabbar" data-theme="b" data-fullscreen="true">
+    <div data-role="navbar">
+      <ul>
+        <li><a href="/login" data-rel="dialog" data-icon="grid">浏览报警</a></li>
+        <li><a href="/login" data-rel="dialog" data-icon="plus">订阅监控</a></li>
+        <li><a href="/login" data-rel="dialog" data-icon="gear">个人设置</a></li>
+      </ul>
+    </div>
+  </div>
+</div> 
+
+</body>
+</html>

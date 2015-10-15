@@ -1,0 +1,25 @@
+<div data-role="page" id="pageLogin">
+  <div data-role="header">
+    <h1>登录窗口</h1>
+  </div>
+
+  <div data-role="content">
+    <form method="post" action="/checkin">
+      <div data-role="fieldcontain">
+        <label for="lname">账户:</label>
+        <input type="text" name="lname" id="lname" placeholder="您的用户名称..">
+        <label for="lpwd">密码:</label>
+        <input type="password" name="lpwd" id="lpwd" placeholder="您的登录密码..">
+      </div>
+      <div data-role="controlgroup" data-type="horizontal">
+        <input type="submit" data-inline="true" value="登录">
+        <input type="submit" data-inline="true" value="取消">
+      </div>
+    </form>
+  </div>
+
+  <div data-role="footer">
+  </div>
+
+</div>
+

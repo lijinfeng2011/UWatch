@@ -1,0 +1,19 @@
+<div data-role="page" id="mesgDetail">
+  <div data-role="header" data-theme="b" data-fullscreen="true">
+    <a href="#pageGlance" data-role="button" data-transition="flip">返回</a>
+    <h2>报警详情</h2>
+  </div>
+
+  <div data-role="content">
+    <div style="margin:10px 0;word-break:break-all;">
+       <h3>报警详情: 共[% count %]条 </h3>
+       <h3>[% hermes %]</h3>
+       <hr />
+[% FOREACH message IN mesgs %]
+       <p> [% message %] </p>
+[% END %]
+    </div>
+  </div>
+
+</div>
+
