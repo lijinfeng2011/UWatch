@@ -4,3 +4,7 @@
 milliseconds() ->
  {MegaSecs, Secs, MicroSecs} = erlang:now(),
  1000000000 * MegaSecs + Secs * 1000 + MicroSecs div 1000.
+
+seconds() ->
+ {MegaSecs, Secs, _} = erlang:now(),
+ 1000000 * MegaSecs + Secs.
