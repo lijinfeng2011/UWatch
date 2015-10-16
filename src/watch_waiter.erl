@@ -98,6 +98,13 @@ handle_client(Socket) ->
             ["filter","table"] ->
                ok( Socket, lists:map( fun(X) -> {N,C,U,T} = X, N++ ":" ++ C++":"++U++":"++integer_to_list(T) end,watch_filter:table()));
 
+             
+            ["token","search",TOKEN] ->
+              gen_tcp:send( Socket, watch_token:search(TOKEN) ), gen_tcp:close( Socket );
+
+            ["token","list"] ->
+               ok( Socket, lists:map( fun(X) -> {Token,U,T} = X, Token++ ":" ++ U ++":"++integer_to_list(T) end,watch_token:list()));
+
             _ -> 
                gen_tcp:send( Socket, "undefinition" ),
                gen_tcp:close( Socket )

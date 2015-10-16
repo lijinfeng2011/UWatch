@@ -12,10 +12,11 @@
 -record(last,{name,time}). %% item 最后出现错误的时间 和user最后处理的错误时间
 -record(alarm,{name,seed,main}). 
 -record(filter,{name,cont,user,time}). 
+-record(token,{token,user,time}). 
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter,token],20000).
 
 init() ->
     NodeList = [node()],
@@ -31,6 +32,8 @@ init() ->
     mnesia:create_table(last,[{attributes,record_info(fields,last)},{disc_copies, NodeList} ]),
     mnesia:create_table(alarm,[{attributes,record_info(fields,alarm)},{disc_copies, NodeList} ]),
     mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
+    mnesia:create_table(token,[{attributes,record_info(fields,token)},{disc_copies, NodeList} ]),
+
     mnesia:stop().
 
 %% do =============================================================
@@ -215,3 +218,21 @@ list_filter(Name) ->
 
 list_filter_table() ->
     do(qlc:q([{X#filter.name, X#filter.cont, X#filter.user, X#filter.time } || X <- mnesia:table(filter)])).
+
+%% token ======================================================
+add_token(Token,User,Time) ->
+    T = Time + watch_misc:seconds(),
+    Row = #token{token = Token,user = User, time = T},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+del_token(Token,User,Time) ->
+    F = fun() -> mnesia:delete_object( #token{ token = Token, user = User, time = Time } ) end,
+    mnesia:transaction(F).
+
+list_token() ->
+    do(qlc:q([{X#token.token, X#token.user,X#token.time} || X <- mnesia:table(token)])).
+
+search_token(Token) ->
+    do(qlc:q([ X#token.user || X <- mnesia:table(token), X#token.token == Token ])).
+
+

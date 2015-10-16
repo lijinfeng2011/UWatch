@@ -11,6 +11,6 @@ start(Port) ->
   watch_notify:start(),
   watch_filter:start(),
   watch_mesg:start(),
-%%  watch_stat:start(),
+  watch_token:start(),
   watch_waiter:start(Port).
 

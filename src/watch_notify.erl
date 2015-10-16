@@ -38,6 +38,7 @@ notify( User, AlarmList ) ->
     inets:start(),
     ssl:start(),
     UserInfo = watch_user:getinfo(User),
+    Token = watch_token:add(User),
     AlarmList2 = lists:map( 
         fun(X) -> 
             PubIndex = watch_item:getindex(X),
@@ -47,7 +48,9 @@ notify( User, AlarmList ) ->
     AlarmList),
     Info = string:join( AlarmList2, "@" ),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
-      [],"application/x-www-form-urlencoded", lists:concat(["user=" ,User ,"&userinfo=",UserInfo,"&info=",Info])},[],[]) of
+      [],"application/x-www-form-urlencoded", lists:concat(
+        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo,"&info=",Info])},[],[]
+      ) of
     {ok, {_,_,Body}}-> Body, Stat = "ok";  
     {error, Reason}->io:format("error cause ~p~n",[Reason]), Stat = "fail"
     end,
