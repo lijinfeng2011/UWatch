@@ -6,11 +6,11 @@ start(Port) ->
   watch_db:init(),
   watch_db:start(),
 
-
   watch_item:start(),
   watch_user:start(),
   watch_notify:start(),
-  watch_waiter:start(Port),
+  watch_filter:start(),
   watch_mesg:start(),
-  watch_stat:start().
+%%  watch_stat:start(),
+  watch_waiter:start(Port).
 

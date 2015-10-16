@@ -11,7 +11,7 @@
 -record(stat,{name,stat}). %% item 的状态 1/1/_
 -record(last,{name,time}). %% item 最后出现错误的时间 和user最后处理的错误时间
 -record(alarm,{name,seed,main}). 
--record(filter,{name,cont}). 
+-record(filter,{name,cont,user,time}). 
 
 start() ->
     mnesia:start(),
@@ -198,12 +198,13 @@ list_last() ->
 
 
 %% filter ======================================================
-add_filter(Name,Cont) ->
-    Row = #filter{name = Name,cont = Cont},
+add_filter(Name,Cont,User,Time) ->
+    T = Time + watch_misc:seconds(),
+    Row = #filter{name = Name,cont = Cont,user = User, time = T},
     F = fun() -> mnesia:write(Row) end,
     mnesia:transaction(F).
-del_filter(Name,Cont) ->
-    F = fun() -> mnesia:delete_object( #filter{ name = Name, cont = Cont } ) end,
+del_filter(Name,Cont,User,Time) ->
+    F = fun() -> mnesia:delete_object( #filter{ name = Name, cont = Cont,user = User, time = Time } ) end,
     mnesia:transaction(F).
 
 list_filter() ->
@@ -212,3 +213,5 @@ list_filter() ->
 list_filter(Name) ->
     do(qlc:q([X#filter.cont || X <- mnesia:table(filter), X#filter.name == Name])).
 
+list_filter_table() ->
+    do(qlc:q([{X#filter.name, X#filter.cont, X#filter.user, X#filter.time } || X <- mnesia:table(filter)])).

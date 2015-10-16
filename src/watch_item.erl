@@ -10,7 +10,8 @@
 
 start() -> 
   spawn( fun() -> mon() end ),
-  spawn( fun() -> cut() end ).
+  spawn( fun() -> cut() end ),
+  spawn( fun() -> filter() end ).
 
 disk_log( ITEM, TYPE ) ->
   {_,L} = watch_disk_log:read_log( ?ITEM_PATH ++ ITEM ++ "/" ++ TYPE ), L.
@@ -68,6 +69,9 @@ cut() ->
   ),
   cut().
 
+filter() ->
+  timer:sleep(5000),
+  filter().
 stored(NAME,MLog,CLog,Q,Index,Stat) ->
   receive
     { "data", Data } ->
