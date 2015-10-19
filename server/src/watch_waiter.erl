@@ -62,6 +62,7 @@ handle_client(Socket) ->
             ["user","del", USER]         -> watch_user:del(USER), ok( Socket );
             ["user","list"]              -> ok( Socket, watch_user:list() );
             ["user","mesg",USER,ITEM]    -> ok( Socket, watch_user:mesg(USER,ITEM) );
+            ["user","mesg",USER,ITEM,From,Type, Limit]    -> ok( Socket, watch_user:mesg(USER,ITEM,From, Type, Limit) );
             ["user","getinfo",USER]      -> ok( Socket, [ watch_user:getinfo(USER) ] );
             ["user","setinfo",USER,INFO] -> watch_user:setinfo(USER,INFO), ok( Socket );
             ["user","getindex",USER,ITEM]-> ok( Socket, [integer_to_list( watch_user:getindex(USER,ITEM)) ] );
