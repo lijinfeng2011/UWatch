@@ -77,11 +77,15 @@ mesg( User, Item ) ->
 mesg( User, Item, From, Type, Limit ) ->
   UserId = getindex( User,Item ),
   case From of
-    "new" -> FromId = UserId;
+    "curr" -> FromId = UserId;
     _ -> FromId = list_to_integer(From)
   end,
 
-  LIMIT = list_to_integer(Limit),
+  case Limit of
+    "all" -> LIMIT = 10000;
+    L -> LIMIT = list_to_integer(Limit)
+  end,
+
   Mesg = watch_item:disk_log( Item, "mesg" ),
 
   case Type of
@@ -100,6 +104,7 @@ mesg_head(Mesg,FromId,Limit,Id,Out) ->
   case length(Out) >= Limit of
     true -> { Id, Out };
     false ->
+       io:format("mseg:~p~n",[length(Mesg)]),
        case length(Mesg) == 0 of
          true -> { Id, Out };
          false ->
@@ -110,7 +115,7 @@ mesg_head(Mesg,FromId,Limit,Id,Out) ->
                      {'EXIT',_} -> mesg_head(NewMesg,FromId,Limit,Id,Out);
                      I ->
                        case I > FromId of
-                           true -> mesg_head(NewMesg,FromId,Limit,I,Out++[M]);
+                           true -> mesg_head(NewMesg,FromId,Limit,I,[M]++Out);
                            false -> mesg_head(NewMesg,FromId,Limit,Id,Out)
                        end
                  end;
