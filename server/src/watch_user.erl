@@ -83,14 +83,25 @@ mesg( User, Item, From, Type, Limit ) ->
 
   case Limit of
     "all" -> LIMIT = 10000;
-    L -> LIMIT = list_to_integer(Limit)
+    L -> LIMIT = list_to_integer(L)
   end,
 
   Mesg = watch_item:disk_log( Item, "mesg" ),
 
+  M = lists:reverse(Mesg),
   case Type of
-    "tail" -> M = lists:reverse(Mesg), mesg_tail(M,FromId,LIMIT);
-    _ -> {NewId,OutMesg} = mesg_head(Mesg,FromId,LIMIT), 
+    "tail" -> mesg_grep(tail,M,FromId,LIMIT);
+    _ -> OutMesg = mesg_grep(head,M,FromId,LIMIT), 
+
+         [ New|_] = M,
+         case re:split(New,"[*]",[{return,list}]) of
+             [[],Index|_] ->
+                 case catch list_to_integer(Index) of
+                     {'EXIT',_} -> NewId = 0;
+                     I -> NewId = I
+                 end;
+             _ -> NewId = 0
+         end,
          case NewId > UserId of
            true -> setindex( User,Item, NewId );
            false -> false
@@ -98,34 +109,8 @@ mesg( User, Item, From, Type, Limit ) ->
          OutMesg
   end.
   
-mesg_head(Mesg,FromId,Limit) -> mesg_head(Mesg,FromId,Limit, 0, []).
-
-mesg_head(Mesg,FromId,Limit,Id,Out) ->
-  case length(Out) >= Limit of
-    true -> { Id, Out };
-    false ->
-       io:format("mseg:~p~n",[length(Mesg)]),
-       case length(Mesg) == 0 of
-         true -> { Id, Out };
-         false ->
-           [M|NewMesg] = Mesg,
-           case re:split(M,"[*]",[{return,list}]) of
-             [[],Index|_] ->
-                 case catch list_to_integer(Index) of
-                     {'EXIT',_} -> mesg_head(NewMesg,FromId,Limit,Id,Out);
-                     I ->
-                       case I > FromId of
-                           true -> mesg_head(NewMesg,FromId,Limit,I,[M]++Out);
-                           false -> mesg_head(NewMesg,FromId,Limit,Id,Out)
-                       end
-                 end;
-                 
-             _ -> mesg_head(NewMesg,FromId,Limit,Id,Out)
-           end
-       end
-  end.
-mesg_tail(Mesg,FromId,Limit) -> mesg_tail(Mesg,FromId,Limit,[]).
-mesg_tail(Mesg,FromId,Limit,Out) ->
+mesg_grep(Type,Mesg,FromId,Limit) -> mesg_grep(Type,Mesg,FromId,Limit,[]).
+mesg_grep(Type,Mesg,FromId,Limit,Out) ->
   case length(Out) >= Limit of
     true -> Out;
     false ->
@@ -136,14 +121,22 @@ mesg_tail(Mesg,FromId,Limit,Out) ->
               case re:split(M,"[*]",[{return,list}]) of
                 [[],Index|_] ->
                    case catch list_to_integer(Index) of
-                      {'EXIT',_} -> mesg_tail(NewMesg,Limit,Out);
+                      {'EXIT',_} -> mesg_grep(Type,NewMesg,Limit,Out);
                       I ->
-                         case I < FromId of
-                             true -> mesg_tail(NewMesg,FromId,Limit,[M]++Out);
-                             false -> mesg_tail(NewMesg,FromId,Limit,Out)
+                         case Type of 
+                             tail ->
+                                 case I < FromId of
+                                     true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
+                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
+                                 end;
+                             _ ->
+                                 case I > FromId of
+                                     true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
+                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
+                                 end
                          end
                    end;
-                _ -> mesg_tail(NewMesg,FromId,Limit,Out)
+                _ -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
               end
       end
   end.
