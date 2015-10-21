@@ -128,12 +128,12 @@ mesg_grep(Type,Mesg,FromId,Limit,Out) ->
                              tail ->
                                  case I < FromId of
                                      true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
-                                     false -> Out
+                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
                                  end;
                              _ ->
                                  case I > FromId of
                                      true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
-                                     false -> Out
+                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
                                  end
                          end
                    end;
