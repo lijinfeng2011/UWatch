@@ -2,6 +2,7 @@
 -export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3]).
 
 -define(INTERVAL, 60).
+-define(DEFAULT_MAX_MESG, 10000).
 
 start() ->
   spawn( fun() -> refresh() end ).
@@ -82,7 +83,7 @@ mesg( User, Item, From, Type, Limit ) ->
   end,
 
   case Limit of
-    "all" -> LIMIT = 10000;
+    "all" -> LIMIT = ?DEFAULT_MAX_MESG;
     L -> LIMIT = list_to_integer(L)
   end,
 
@@ -127,12 +128,12 @@ mesg_grep(Type,Mesg,FromId,Limit,Out) ->
                              tail ->
                                  case I < FromId of
                                      true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
-                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
+                                     false -> Out
                                  end;
                              _ ->
                                  case I > FromId of
                                      true -> mesg_grep(Type,NewMesg,FromId,Limit,Out++[M]);
-                                     false -> mesg_grep(Type,NewMesg,FromId,Limit,Out)
+                                     false -> Out
                                  end
                          end
                    end;
