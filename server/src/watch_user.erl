@@ -153,7 +153,8 @@ refresh() ->
              io:format("new ~p~n",[USER]),
              register( USER, Pid );
            false -> USER ! { check, Time }
-         end
+         end,
+         io:format("user refresh:~p~n", [X])
       end,
       watch_db:list_user()
   ),

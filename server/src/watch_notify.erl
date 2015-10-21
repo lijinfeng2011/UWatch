@@ -47,9 +47,10 @@ notify( User, AlarmList ) ->
         end, 
     AlarmList),
     Info = string:join( AlarmList2, "@" ),
+    MesgNotify = lists:concat( ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo,"&info=",Info]), 
+    io:format("notify:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
-      [],"application/x-www-form-urlencoded", lists:concat(
-        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo,"&info=",Info])},[],[]
+      [],"application/x-www-form-urlencoded", MesgNotify },[],[]
       ) of
     {ok, {_,_,Body}}-> Body, Stat = "ok";  
     {error, Reason}->io:format("error cause ~p~n",[Reason]), Stat = "fail"
