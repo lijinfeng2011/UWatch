@@ -94,10 +94,3 @@ manage(Filter) ->
       end
   end,
   manage(Filter).
-
-ok( Socket ) ->
-  gen_tcp:send( Socket, "ok" ), gen_tcp:close( Socket ).
-
-ok( Socket, List ) ->
-  lists:map( fun(X) -> gen_tcp:send( Socket, X ++"\n" ) end, List ),
-  gen_tcp:close( Socket ).
