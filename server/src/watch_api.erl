@@ -39,6 +39,8 @@ api(List) ->
     ["stat","list"] ->  watch_stat:list();
     ["last","list"] ->  watch_last:list();
 
+    ["filter","add",USER,NAME,CONT] ->  
+        lists:foreach( fun(X) -> watch_filter:add(NAME,X,USER,86400) end,string:tokens( CONT, ":" ) ),["ok"];
     ["filter","add",USER,TIME,NAME,CONT] -> 
         T = list_to_integer(TIME),
         lists:foreach( fun(X) -> watch_filter:add(NAME,X,USER,T) end,string:tokens( CONT, ":" ) ),["ok"];
@@ -48,5 +50,10 @@ api(List) ->
     ["filter","table"] -> lists:map( fun(X) -> {N,C,U,T} = X, N++ ":" ++ C++":"++U++":"++integer_to_list(T) end,watch_filter:table());
     ["token","search",TOKEN] -> [ watch_token:search(TOKEN) ];
     ["token","list"] -> lists:map( fun(X) -> {Token,U,T} = X, Token++ ":" ++ U ++":"++integer_to_list(T) end,watch_token:list());
+
+    ["notify","setstat",USER,STAT] -> watch_notify:setstat(USER,STAT),  ["ok"];
+    ["notify","getstat",USER] -> [ watch_notify:getstat(USER) ];
+    ["notify","liststat"] ->  watch_notify:liststat() ;
+
     _ -> [ "undefined"] 
   end.

@@ -13,10 +13,11 @@
 -record(alarm,{name,seed,main}). 
 -record(filter,{name,cont,user,time}). 
 -record(token,{token,user,time}). 
+-record(notify,{name,stat}). 
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter,token],20000).
+    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify],20000).
 
 init() ->
     NodeList = [node()],
@@ -33,6 +34,7 @@ init() ->
     mnesia:create_table(alarm,[{attributes,record_info(fields,alarm)},{disc_copies, NodeList} ]),
     mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(token,[{attributes,record_info(fields,token)},{disc_copies, NodeList} ]),
+    mnesia:create_table(notify,[{attributes,record_info(fields,notify)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -235,4 +237,15 @@ list_token() ->
 search_token(Token) ->
     do(qlc:q([ X#token.user || X <- mnesia:table(token), X#token.token == Token ])).
 
+%% notify ======================================================
+set_notify(Name,Stat) ->
+    Row = #notify{name = Name,stat = Stat},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
 
+get_notify(NAME) ->
+    do(qlc:q([ X#notify.stat || X <- mnesia:table(notify), X#notify.name == NAME ])).
+
+
+list_notify() ->
+    do(qlc:q([{X#notify.name, X#notify.stat} || X <- mnesia:table(notify)])).

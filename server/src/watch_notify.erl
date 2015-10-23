@@ -35,9 +35,15 @@ stored(Log) ->
   stored(Log).
 
 notify( User, AlarmList ) ->
+    case getstat( User ) of
+        "off" -> false;
+         _ -> notify( do, User, AlarmList )
+    end.
+
+notify( do, User, AlarmList ) ->
     inets:start(),
     ssl:start(),
-    UserInfo = watch_user:getinfo(User),
+    [UserInfo] = watch_user:getinfo(User),
     Token = watch_token:add(User),
     AlarmList2 = lists:map( 
         fun(X) -> 
@@ -57,3 +63,6 @@ notify( User, AlarmList ) ->
     end,
     notify_stored ! { User ++ ":" ++ Info ++ ":" ++ Stat }.
 
+setstat(User,Stat) -> watch_db:set_notify(User,Stat).
+getstat(User) -> watch_db:get_notify(User).
+liststat() -> lists:map( fun(X) -> {N,S} =X, N++":"++S end,watch_db:list_notify()).
