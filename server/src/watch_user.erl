@@ -171,19 +171,24 @@ stored(NAME) ->
      
         case UserMsec + UserInterval < Time of
             true ->
-                ItemList = watch_relate:list4user_itemnameonly(NAME),
-                AlarmList = lists:filter(
-                               fun(X) ->
-                                  TmpTime = watch_db:get_last("item#"++X),
-                                  (UserMsec< TmpTime) and ( TmpTime<Time)
-                               end, 
-                            ItemList ),
-
-               case length(AlarmList) > 0 of
-                   true -> watch_notify:notify( NAME,AlarmList ),
-                           watch_db:set_last("user#"++NAME, Time);
-                   false -> false      
-               end;
+           
+                case watch_notify:getstat( NAME ) of 
+                    "off" -> false;
+                     _ ->
+                           ItemList = watch_relate:list4user_itemnameonly(NAME),
+                           AlarmList = lists:filter(
+                                          fun(X) ->
+                                             TmpTime = watch_db:get_last("item#"++X),
+                                             (UserMsec< TmpTime) and ( TmpTime<Time)
+                                          end, 
+                                       ItemList ),
+                
+                          case length(AlarmList) > 0 of
+                              true -> watch_notify:notify( NAME,AlarmList ),
+                                      watch_db:set_last("user#"++NAME, Time);
+                              false -> false      
+                          end
+                end;
             false -> fase
         end
         

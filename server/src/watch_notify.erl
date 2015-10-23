@@ -35,12 +35,6 @@ stored(Log) ->
   stored(Log).
 
 notify( User, AlarmList ) ->
-    case getstat( User ) of
-        "off" -> false;
-         _ -> notify( do, User, AlarmList )
-    end.
-
-notify( do, User, AlarmList ) ->
     inets:start(),
     ssl:start(),
     [UserInfo] = watch_user:getinfo(User),
