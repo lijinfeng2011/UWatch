@@ -46,7 +46,7 @@ getinfo( User )        -> watch_db:get_user_info( User ).
 
 getinterval( User ) ->
   [Info] = watch_db:get_user_info(User),
-  InfoList = string:tokens(Info,"#"),
+  InfoList = string:tokens(Info,":"),
   case catch lists:nth(4,InfoList ) of
     {'EXIT',_} -> ?INTERVAL;
     V -> 
@@ -169,7 +169,7 @@ stored(NAME) ->
         UserInterval = watch_user:getinterval(NAME),
         io:format( "user~pcheck~p:~p:~p~n",[NAME, UserMsec, UserInterval, Time]),
      
-        case UserMsec + UserInterval < Time of
+        case UserMsec + UserInterval * 1000 < Time of
             true ->
            
                 case watch_notify:getstat( NAME ) of 
