@@ -110,6 +110,9 @@ del_user(Name) ->
 
 list_user() ->
     do(qlc:q([X#user.name || X <- mnesia:table(user)])).
+list_user_info() ->
+    do(qlc:q([{X#user.name,X#user.info} || X <- mnesia:table(user)])).
+
 
 
 %% relate  ====================================================

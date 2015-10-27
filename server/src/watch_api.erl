@@ -19,6 +19,7 @@ api(List) ->
     ["user","add",USER,PASS]     -> watch_user:add(USER, PASS ), ["ok"];
     ["user","del", USER]         -> watch_user:del(USER), ["ok"];
     ["user","list"]              -> watch_user:list();
+    ["user","listinfo"]              -> watch_user:list_info();
     ["user","mesg",USER,ITEM]    -> watch_user:mesg(USER,ITEM);
     ["user","mesg",USER,ITEM,From,Type, Limit]    ->  watch_user:mesg(USER,ITEM,From, Type, Limit);
     ["user","getinfo",USER]      ->  [ watch_user:getinfo(USER) ];
@@ -27,6 +28,7 @@ api(List) ->
     ["user","setindex",USER,ITEM,ID]  -> watch_user:setindex(USER,ITEM,list_to_integer(ID)),["ok"];
     ["user","auth",USER,PASS]         -> [watch_user:auth(USER,PASS)];
     ["user","changepwd",USER,OLD,NEW] -> [watch_user:changepwd(USER,OLD,NEW)];
+    ["user","changepwd",USER,NEW] -> [watch_user:changepwd(USER,NEW)];
 
 
     ["follow","add",Owner,Follower] ->lists:foreach(fun(X) -> watch_follow:add(X,Follower) end,string:tokens( Owner, ":" )), ["ok"];

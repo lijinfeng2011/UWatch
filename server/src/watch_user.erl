@@ -1,5 +1,5 @@
 -module(watch_user).
--export([start/0,add/2,del/1,list/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3]).
+-export([start/0,add/2,del/1,list/0,list_info/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3,changepwd/2]).
 
 -define(INTERVAL, 60).
 -define(DEFAULT_MAX_MESG, 10000).
@@ -15,6 +15,7 @@ add(User,Passwd) ->
 
 del(User) -> watch_db:del_user(User).
 list() -> watch_db:list_user().
+list_info() -> lists:map( fun(X) -> {N,I} = X, N++":"++I end, watch_db:list_user_info()).
 
 auth(User,Passwd) ->
   PASS = watch_db:get_user_passwd(User),
@@ -36,6 +37,12 @@ changepwd(User, OldPwd, NewPwd) ->
          _        -> "success"
       end;
     "fail" -> "auth failed"
+  end.
+
+changepwd(User, NewPwd) ->
+  case watch_db:set_user_passwd(User, NewPwd) of
+    { error } -> "set failed";
+     _        -> "success"
   end.
 
 setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, Index ).
