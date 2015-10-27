@@ -20,6 +20,7 @@ api(List) ->
     ["user","del", USER]         -> watch_user:del(USER), ["ok"];
     ["user","list"]              -> watch_user:list();
     ["user","listinfo"]              -> watch_user:list_info();
+    ["user","listtable"]              -> watch_user:list_table();
     ["user","mesg",USER,ITEM]    -> watch_user:mesg(USER,ITEM);
     ["user","mesg",USER,ITEM,From,Type, Limit]    ->  watch_user:mesg(USER,ITEM,From, Type, Limit);
     ["user","getinfo",USER]      ->  [ watch_user:getinfo(USER) ];

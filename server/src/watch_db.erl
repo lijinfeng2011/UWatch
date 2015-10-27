@@ -113,6 +113,8 @@ list_user() ->
 list_user_info() ->
     do(qlc:q([{X#user.name,X#user.info} || X <- mnesia:table(user)])).
 
+list_user_table() ->
+    do(qlc:q([{X#user.name,X#user.passwd,X#user.info} || X <- mnesia:table(user)])).
 
 
 %% relate  ====================================================
