@@ -1,0 +1,128 @@
+    <!-- SIDE MENU -->
+    <div id="skin-select">
+        <div id="logo">
+         <h1>UWatch<span>v1.3</span></h1>
+        </div>
+
+        <a id="toggle">
+            <span class="entypo-menu"></span>
+        </a>
+        <div class="dark">
+            <form action="#">
+                <span>
+                    <input type="text" name="search" value="" class="search rounded id_search" placeholder="Search Menu..." autofocus="">
+                </span>
+            </form>
+        </div>
+
+        <div class="search-hover">
+            <form id="demo-2">
+                <input type="search" placeholder="Search Menu..." class="id_search">
+            </form>
+        </div>
+
+        <div class="skin-part">
+            <div id="tree-wrap">
+                <div class="side-bar">
+                    <ul class="topnav menu-left-nest">
+                        <li>
+                            <a href="#" style="border-left:0px solid!important;" class="title-menu-left">
+
+                                <span class="widget-menu"></span>
+                                <i data-toggle="tooltip" class="entypo-cog pull-right config-wrap"></i>
+
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="tooltip-tip ajax-load" href="user" title="Blog App">
+                                <i class="icon-document-edit"></i>
+                                <span>用户管理</span>
+
+                            </a>
+                        </li>
+
+                        <li>
+                            <a class="tooltip-tip ajax-load" href="item" title="Blog App">
+                                <i class="icon-document-edit"></i>
+                                <span>监控项管理</span>
+
+                            </a>
+<!--
+                            <ul>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user-add" title="Blog Detail"><i class="entypo-newspaper"></i><span>添加用户</span></a>
+                                </li>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user" title="Blog List"><i class="entypo-doc-text"></i><span>编辑用户</span></a>
+                                </li>
+                            </ul>
+-->
+                        </li>
+
+
+                        <li>
+                            <a class="tooltip-tip ajax-load" href="follow" title="Blog App">
+                                <i class="icon-document-edit"></i>
+                                <span>Follow管理</span>
+
+                            </a>
+<!--
+                            <ul>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user-add" title="Blog Detail"><i class="entypo-newspaper"></i><span>添加用户</span></a>
+                                </li>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user" title="Blog List"><i class="entypo-doc-text"></i><span>编辑用户</span></a>
+                                </li>
+                            </ul>
+-->
+                        </li>
+
+<!--
+
+                        <li>
+                            <a class="tooltip-tip ajax-load" href="#" title="Blog App">
+                                <i class="icon-document-edit"></i>
+                                <span>Filter管理</span>
+
+                            </a>
+                            <ul>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user-add" title="Blog Detail"><i class="entypo-newspaper"></i><span>添加用户</span></a>
+                                </li>
+                                <li>
+                                    <a class="tooltip-tip2 ajax-load" href="user" title="Blog List"><i class="entypo-doc-text"></i><span>编辑用户</span></a>
+                                </li>
+                            </ul>
+                        </li>
+
+-->
+                    </ul>
+
+                    <ul class="topnav menu-left-nest">
+                        <li>
+                            <a href="#" style="border-left:0px solid!important;" class="title-menu-left">
+
+                                <span class="design-kit"></span>
+                                <i data-toggle="tooltip" class="entypo-cog pull-right config-wrap"></i>
+
+                            </a>
+                        </li>
+
+
+                        <li>
+                            <a class="tooltip-tip " href="/admin/logout" title="login">
+                                <i class="icon-download"></i>
+                                <span>注销</span>
+                            </a>
+                        </li>
+
+                    </ul>
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- END OF SIDE MENU -->
