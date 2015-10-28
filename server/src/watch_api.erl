@@ -37,7 +37,7 @@ api(List) ->
     ["follow","update",Owner,Follower] -> watch_follow:update(Owner, Follower), ["ok"];
     ["follow","del4user",Owner] -> watch_follow:del4user(Owner), ["ok"];
     ["follow","list"] ->  watch_follow:list();
-    ["follow","list4user",USER] ->  watch_follow:list(USER),["ok"];
+    ["follow","list4user",USER] ->  watch_follow:list(USER);
 
     ["stat","list"] ->  watch_stat:list();
     ["last","list"] ->  watch_last:list();
