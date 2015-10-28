@@ -14,10 +14,13 @@
 -record(filter,{name,cont,user,time}). 
 -record(token,{token,user,time}). 
 -record(notify,{name,stat}). 
+-record(admin,{name,stat}). 
 
 start() ->
     mnesia:start(),
-    mnesia:wait_for_tables([item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify],20000).
+    mnesia:wait_for_tables(
+        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,admin]
+    ,20000).
 
 init() ->
     NodeList = [node()],
@@ -35,6 +38,7 @@ init() ->
     mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(token,[{attributes,record_info(fields,token)},{disc_copies, NodeList} ]),
     mnesia:create_table(notify,[{attributes,record_info(fields,notify)},{disc_copies, NodeList} ]),
+    mnesia:create_table(admin,[{attributes,record_info(fields,admin)},{disc_copies, NodeList},{type,bag} ]),
 
     mnesia:stop().
 
@@ -254,3 +258,19 @@ get_notify(NAME) ->
 
 list_notify() ->
     do(qlc:q([{X#notify.name, X#notify.stat} || X <- mnesia:table(notify)])).
+
+%% admin ======================================================
+add_admin(Name) ->
+    Row = #admin{name = Name,stat = 1 },
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+del_admin(Name) ->
+    F = fun() -> mnesia:delete_object( #admin{ name = Name,stat = 1 } ) end,
+    mnesia:transaction(F).
+
+get_admin(NAME) ->
+    do(qlc:q([ X#admin.name || X <- mnesia:table(admin), X#admin.name == NAME ])).
+
+list_admin() ->
+    lists:map( fun(X) -> {N} = X, N end, do(qlc:q([{X#admin.name} || X <- mnesia:table(admin)]) )).

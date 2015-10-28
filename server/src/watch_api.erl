@@ -56,7 +56,12 @@ api(List) ->
 
     ["notify","setstat",USER,STAT] -> watch_notify:setstat(USER,STAT),  ["ok"];
     ["notify","getstat",USER] -> [ watch_notify:getstat(USER) ];
-    ["notify","liststat"] ->  watch_notify:liststat() ;
+    ["notify","liststat"] ->  watch_notify:liststat();
+
+    ["admin","add",USER] -> watch_admin:addadmin(USER),  ["ok"];
+    ["admin","del",USER] -> watch_admin:deladmin(USER),  ["ok"];
+    ["admin","get",USER] -> [ watch_admin:getadmin(USER) ];
+    ["admin","list"] -> watch_admin:listadmin();
 
     _ -> [ "undefined"] 
   end.
