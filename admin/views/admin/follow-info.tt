@@ -151,8 +151,8 @@ function deleteitem() { if( confirm('删除该项follow关系？'))     { return
                         <div class="nest" id="FilteringClose">
                             <div class="title-alt">
                                 <form  action="#" method="post">
-                                owner：<input id="addowner" type="text" name="addowner" style="color:gray;" />
-                                follower：<input id="addfollower" type="text" name="addfollower" style="color:gray;" />
+                                跟随者：<input id="addowner" type="text" name="addowner" style="color:gray;" />
+                                被跟随：<input id="addfollower" type="text" name="addfollower" style="color:gray;" />
                                 <input type="submit" value="添加"/>
                                 </form>
  
@@ -180,8 +180,8 @@ function deleteitem() { if( confirm('删除该项follow关系？'))     { return
                                 <table id="footable-res2" class="demo" data-filter="#filter" data-filter-text-only="true">
                                     <thead>
                                         <tr>
-                                            <th data-toggle="true">Owner</th>
-                                            <th data-toggle="true">Follower</th>
+                                            <th data-toggle="true">跟随者</th>
+                                            <th data-toggle="true">被跟随</th>
                                             <th data-toggle="true">删除</th>
                                         </tr>
                                     </thead>
