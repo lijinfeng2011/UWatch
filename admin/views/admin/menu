@@ -35,7 +35,7 @@
                         </li>
 
                         <li>
-                            <a class="tooltip-tip ajax-load" href="user" title="Blog App">
+                            <a class="tooltip-tip ajax-load" href="user" title="user">
                                 <i class="icon-document-edit"></i>
                                 <span>用户管理</span>
 
@@ -43,7 +43,7 @@
                         </li>
 
                         <li>
-                            <a class="tooltip-tip ajax-load" href="item" title="Blog App">
+                            <a class="tooltip-tip ajax-load" href="item" title="item">
                                 <i class="icon-document-edit"></i>
                                 <span>监控项管理</span>
 
@@ -62,7 +62,7 @@
 
 
                         <li>
-                            <a class="tooltip-tip ajax-load" href="follow" title="Blog App">
+                            <a class="tooltip-tip ajax-load" href="follow" title="follow">
                                 <i class="icon-document-edit"></i>
                                 <span>Follow管理</span>
 
