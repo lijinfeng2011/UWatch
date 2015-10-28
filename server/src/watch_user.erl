@@ -181,8 +181,8 @@ stored(NAME) ->
             true ->
            
                 case watch_notify:getstat( NAME ) of 
-                    "off" -> false;
-                     _ ->
+                    [ "off" ] -> io:format("user ~p off~n",[NAME]),false;
+                     _ -> 
                            ItemList = watch_relate:list4user_itemnameonly(NAME),
                            AlarmList = lists:filter(
                                           fun(X) ->
