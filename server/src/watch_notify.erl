@@ -39,21 +39,39 @@ notify( User, AlarmList ) ->
     ssl:start(),
     [UserInfo] = watch_user:getinfo(User),
     Token = watch_token:add(User),
-    AlarmList2 = lists:map( 
-        fun(X) -> 
-            PubIndex = watch_item:getindex(X),
-            PriIndex = watch_user:getindex(User,X),
-            X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ) 
-        end, 
-    AlarmList),
-    Info = string:join( AlarmList2, "@" ),
-    MesgNotify = lists:concat( ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo,"&info=",Info]), 
+    case watch_detail:getstat( User ) of
+        [ "on" ] -> 
+            lists:map(
+                fun(X) ->
+                    PubIndex = watch_item:getindex(X),
+                    PriIndex = watch_user:getindex(User,X),
+                    ItemCountInfo = X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ),
+                Info = ItemCountInfo ++ string:join( watch_user:mesg(User,X,"curr", "head", "all"), ":" ),
+                send( User, Token, UserInfo, Info, "1" )    
+                end,
+            AlarmList);
+        _ ->
+            AlarmList2 = lists:map( 
+                fun(X) -> 
+                    PubIndex = watch_item:getindex(X),
+                    PriIndex = watch_user:getindex(User,X),
+                    X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ) 
+                end, 
+            AlarmList),
+            Info = string:join( AlarmList2, "@" ),
+            send( User, Token, UserInfo, Info, "0" )
+    end.
+
+send( User, Token, UserInfo, Info, Detail ) ->
+    MesgNotify = lists:concat(
+        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo, "&detail", Detail,"&info=",Info]
+    ),
     io:format("notify:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
       [],"application/x-www-form-urlencoded", MesgNotify },[],[]
       ) of
-    {ok, {_,_,Body}}-> Body, Stat = "ok";  
-    {error, Reason}->io:format("error cause ~p~n",[Reason]), Stat = "fail"
+      {ok, {_,_,Body}}-> Body, Stat = "ok";
+      {error, Reason}->io:format("error cause ~p~n",[Reason]), Stat = "fail"
     end,
     notify_stored ! { User ++ ":" ++ Info ++ ":" ++ Stat }.
 

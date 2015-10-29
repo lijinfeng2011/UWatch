@@ -14,12 +14,13 @@
 -record(filter,{name,cont,user,time}). 
 -record(token,{token,user,time}). 
 -record(notify,{name,stat}). 
+-record(detail,{name,stat}). 
 -record(admin,{name,stat}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,admin]
+        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail,admin]
     ,20000).
 
 init() ->
@@ -38,6 +39,7 @@ init() ->
     mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(token,[{attributes,record_info(fields,token)},{disc_copies, NodeList} ]),
     mnesia:create_table(notify,[{attributes,record_info(fields,notify)},{disc_copies, NodeList} ]),
+    mnesia:create_table(detail,[{attributes,record_info(fields,detail)},{disc_copies, NodeList} ]),
     mnesia:create_table(admin,[{attributes,record_info(fields,admin)},{disc_copies, NodeList},{type,bag} ]),
 
     mnesia:stop().
@@ -258,6 +260,20 @@ get_notify(NAME) ->
 
 list_notify() ->
     do(qlc:q([{X#notify.name, X#notify.stat} || X <- mnesia:table(notify)])).
+
+%% detail ======================================================
+set_detail(Name,Stat) ->
+    Row = #detail{name = Name,stat = Stat},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+get_detail(NAME) ->
+    do(qlc:q([ X#detail.stat || X <- mnesia:table(detail), X#detail.name == NAME ])).
+
+
+list_detail() ->
+    do(qlc:q([{X#detail.name, X#detail.stat} || X <- mnesia:table(detail)])).
+
 
 %% admin ======================================================
 add_admin(Name) ->
