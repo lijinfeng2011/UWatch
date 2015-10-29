@@ -64,7 +64,7 @@ notify( User, AlarmList ) ->
 
 send( User, Token, UserInfo, Info, Detail ) ->
     MesgNotify = lists:concat(
-        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo, "&detail", Detail,"&info=",Info]
+        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
     ),
     io:format("notify:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
