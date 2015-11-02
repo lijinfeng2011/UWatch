@@ -67,5 +67,10 @@ api(List) ->
     ["admin","get",USER] -> [ watch_admin:getadmin(USER) ];
     ["admin","list"] -> watch_admin:listadmin();
 
+    ["broken","add",USER] -> watch_broken:addbroken(USER),  ["ok"];
+    ["broken","del",USER] -> watch_broken:delbroken(USER),  ["ok"];
+    ["broken","list"] -> watch_broken:listbroken();
+
+
     _ -> [ "undefined"] 
   end.

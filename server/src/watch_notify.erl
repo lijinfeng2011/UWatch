@@ -45,9 +45,14 @@ notify( User, AlarmList ) ->
                 fun(X) ->
                     PubIndex = watch_item:getindex(X),
                     PriIndex = watch_user:getindex(User,X),
-                    ItemCountInfo = X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ),
-                Info = ItemCountInfo ++ string:join( watch_user:mesg(User,X,"curr", "head", "all"), ":" ),
-                send( User, Token, UserInfo, Info, "1" )    
+                    COUNT = PubIndex - PriIndex,
+                    case COUNT > 0 of
+                        true ->
+                            ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
+                            Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all")], "@@@" ),
+                            send( User, Token, UserInfo, Info, "1" );
+                        false -> false
+                    end
                 end,
             AlarmList);
         _ ->
@@ -58,7 +63,7 @@ notify( User, AlarmList ) ->
                     X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ) 
                 end, 
             AlarmList),
-            Info = string:join( AlarmList2, "@" ),
+            Info = string:join( AlarmList2, "@@@" ),
             send( User, Token, UserInfo, Info, "0" )
     end.
 

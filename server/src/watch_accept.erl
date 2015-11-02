@@ -57,7 +57,9 @@ handle_item( Socket ) ->
   end.
 
 filter() ->
-  L = watch_filter:list4name("main"),
+  Filter = watch_filter:list4name("main"),
+  Broken = watch_broken:listbroken(),
+  L = sets:to_list(sets:from_list(lists:append(Filter,Broken))),
   try
     accept_manager ! { filter, L}
   catch

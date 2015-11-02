@@ -14,13 +14,14 @@
 -record(filter,{name,cont,user,time}). 
 -record(token,{token,user,time}). 
 -record(notify,{name,stat}). 
--record(detail,{name,stat}). 
+-record(detail3,{name,stat}). 
 -record(admin,{name,stat}). 
+-record(broken,{name,stat}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail,admin]
+        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken]
     ,20000).
 
 init() ->
@@ -39,8 +40,9 @@ init() ->
     mnesia:create_table(filter,[{attributes,record_info(fields,filter)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(token,[{attributes,record_info(fields,token)},{disc_copies, NodeList} ]),
     mnesia:create_table(notify,[{attributes,record_info(fields,notify)},{disc_copies, NodeList} ]),
-    mnesia:create_table(detail,[{attributes,record_info(fields,detail)},{disc_copies, NodeList} ]),
+    mnesia:create_table(detail3,[{attributes,record_info(fields,detail3)},{disc_copies, NodeList} ]),
     mnesia:create_table(admin,[{attributes,record_info(fields,admin)},{disc_copies, NodeList},{type,bag} ]),
+    mnesia:create_table(broken,[{attributes,record_info(fields,broken)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -263,16 +265,16 @@ list_notify() ->
 
 %% detail ======================================================
 set_detail(Name,Stat) ->
-    Row = #detail{name = Name,stat = Stat},
+    Row = #detail3{name = Name,stat = Stat},
     F = fun() -> mnesia:write(Row) end,
     mnesia:transaction(F).
 
 get_detail(NAME) ->
-    do(qlc:q([ X#detail.stat || X <- mnesia:table(detail), X#detail.name == NAME ])).
+    do(qlc:q([ X#detail3.stat || X <- mnesia:table(detail3), X#detail3.name == NAME ])).
 
 
 list_detail() ->
-    do(qlc:q([{X#detail.name, X#detail.stat} || X <- mnesia:table(detail)])).
+    do(qlc:q([{X#detail3.name, X#detail3.stat} || X <- mnesia:table(detail3)])).
 
 
 %% admin ======================================================
@@ -290,3 +292,17 @@ get_admin(NAME) ->
 
 list_admin() ->
     lists:map( fun(X) -> {N} = X, N end, do(qlc:q([{X#admin.name} || X <- mnesia:table(admin)]) )).
+
+
+%% broken ======================================================
+add_broken(Name) ->
+    Row = #broken{name = Name,stat = 1 },
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+del_broken(Name) ->
+    F = fun() -> mnesia:delete_object( #broken{ name = Name,stat = 1 } ) end,
+    mnesia:transaction(F).
+
+list_broken() ->
+    lists:map( fun(X) -> {N} = X, N end, do(qlc:q([{X#broken.name} || X <- mnesia:table(broken)]) )).
