@@ -1,4 +1,4 @@
-<div data-role="page" id="pageSubscribe">
+<div data-role="page" id="pageSubscribe" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>订阅监控</h1>
     <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
@@ -21,35 +21,29 @@
 [% IF error %]
      <div class="mesg-box"><p>监控列表有误，请稍后再试!</p></div>
 [% ELSE %]
-     <ul data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索" data-split-theme="a">
-  [% FOREACH group IN groupMap.name %]
+   [% show = 1 %]
+   <ul id="bookList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索" data-split-theme="a"> 
+   [% FOREACH group IN groupMap.name %]
+     [% IF show %] 
         <li data-role="list-divider"> [% group %] <span class="ui-li-count">[% countMap.$group %]</span></li>
-      [% FOREACH item IN groupMap.$group %]
+        [% FOREACH item IN groupMap.$group %]
         <li>
           <div data-role="collapsible" class="sub-collapse" data-name="[% item %]">
             <h3 style="margin: 0;">[% item %]</h3>
             <div class="content">
-                <p id="mesgbox">加载中, 请稍后...</p>
+                <p>加载中, 请稍后...</p>
             </div>
-          </div> 
+          </div>
         </li>
-      [% END %]
-  [% END %]
-     </ul>
+        [% END %]
+     [% show = 0 %]
+     [% END %]
+   [% END %]
+   </ul>
 [% END %]
     </div>
   </div>
 
-  <div data-role="footer" data-position="fixed" data-id="main-tabbar" data-theme="b" data-fullscreen="true">
-    <div data-role="navbar">
-      <ul>
-        <li><a href="#pageGlance" data-icon="grid" data-transition="slide" data-direction="reverse">浏览报警</a></li>
-        <li><a href="#" data-icon="plus" class="ui-btn-active ui-state-persist">订阅监控</a></li>
-        <li><a href="/profile" data-icon="gear" data-transition="slide">个人设置</a></li>
-      </ul>
-    </div>
-  </div>
- 
   <style type="text/css">
     .ui-listview>.ui-li-static {
        padding: .1em .3em;
@@ -62,107 +56,43 @@
     }
   </style>
 
-  <script type="text/javascript">
-    function ajaxFormSubmit( event ) {
-        var param = ""; var token = "";
-        var $targetBox = $(event.target).closest('.subscribe-box');
-
-        $.each ( $targetBox.find('.ui-checkbox'), function(n, item) {
-            var name = $(item).find('input[type="checkbox"]').attr("name");
-            var value = $(item).find('label').hasClass("ui-checkbox-on") ? 1 : 0;
-            if (param) { token = "&" + name + "=" + value; }
-            else { token = "?" + name + "=" + value; }
-            param = param + token;
-        });
-        param = param + "&hermesID=" + $targetBox.find('input[name="hermesID"]').val();
-
-        $.ajax({
-            timeout:     3000,
-            async:       true, 
-            dataType:    "json",
-            url:         "/ajaxBookSubscribe" + param,
-            beforeSend:  showLoader,                                                                
-            success:     function ( data ) {
-                             var responseHTML = '';
-                             if ( data.response === 1 ) {
-                                 responseHTML = '<p>订阅失败，稍后再试!</p>';
-                             } else if ( data.response === 0 ) {
-                                 responseHTML = '<p>订阅成功!</p>';
-                             }
-                             $targetBox.find('.mesg-box').html( responseHTML );
-                         },
-            error:       function (XMLHttpRequest, textStatus, errorThrown) {
-                             var responseHTML = '<p>链接失败，稍后再试!</p>';
-                             $targetBox.find('.mesg-box').html( responseHTML );
-                         },
-            complete:    function () {
-                             $targetBox.find('.mesg-box').show();
-                             hideLoader();
-                         },
-        });
-    }
-
-    function ajaxGetSubDetail( target ) {
-        var $target = target;
-        $.ajax({
-            timeout:    2000,
-            async:      true,
-            dataType:   "json",
-            url:        "/ajaxGetSubDetail?group=" + $target.attr("data-name"),
-            beforeSend: showLoader,
-            success:    function ( data ) {
-                           var contentHtml = "";
-                           if ( data.subDetail != null && data.subDetail.length > 0 ) {
-                              contentHtml = '<div class="subscribe-box"><fieldset data-role="controlgroup">';
-                              $.each (data.subDetail, function( n, value ) {
-                                 contentHtml = contentHtml + '<label for="' + value.name + '">' + value.name + '</label>';
-                                 if ( value.booked ) {
-                                    contentHtml = contentHtml + '<input type="checkbox" name="' + value.name + '" id="' + value.name + '" checked="checked">';
-                                 } else {
-                                    contentHtml = contentHtml + '<input type="checkbox" name="' + value.name + '" id="' + value.name + '">';
-                                 }
-                              });
-                              contentHtml = contentHtml + '</fieldset>';
-                              contentHtml = contentHtml + '<input type="hidden" name="hermesID" value="' + $target.attr("data-name") + '">';
-                              contentHtml = contentHtml + '<input type="button" onclick="ajaxFormSubmit(event)" value="提交选择">';
-                              contentHtml = contentHtml + '<div class="mesg-box" style="display:none"></div></div>';
-                           } else {
-                              contentHtml = "<p>无法获得订阅信息!</p>";
-                           }
-                           $target.find('.content').html(contentHtml).trigger("create");
-                        },
-            error:      function( XMLHttpRequest, textStatus, errorThrown ) {
-                           var contentHtml = "<p>获取数据有误</p>"
-                           $target.find('.content').prepend(contentHtml).trigger("create");
-                        },
-            complete:   hideLoader,
-        });
-    }
-
-    function showLoader() {
-        $.mobile.loading('show', {
-            text: '数据加载中，请稍候',
-            textVisible: true,
-            dataType: "json",
-            theme: 'a',
-            textonly: false,
-            html: ""
-        });
-    }
-
-    function hideLoader() {
-        $.mobile.loading('hide');
-    }
-
-    $(document).ready( function() {
-        $(".sub-collapse").collapsible({
-            expand: function( event, ui ) {
-                ajaxGetSubDetail( $(event.target) );
-            }
-        });
+  <script>
+    $(document).on('pageshow', '#pageSubscribe', function() {
+        setTimeout( appendContent, 200 ); 
     });
 
+    function appendContent() {
+        var show = 0, appendHTML = '', obj = '';
+        
+        [% FOREACH group IN groupMap.name %]
+            if ( show > 0 ) {
+                appendHTML = appendHTML + '<li data-role="list-divider">' + '[% group %]' + '<span class="ui-li-count">' + '[% countMap.$group %]' + '</span></li>';
+                [% FOREACH item IN groupMap.$group %]
+                       appendHTML = appendHTML + '<li>';
+                       appendHTML = appendHTML + '<div data-role="collapsible" class="sub-collapse new-add" data-name="' + "[% item %]" + '">';
+                       appendHTML = appendHTML + '<h3 style="margin: 0;">' + "[% item %]" + '</h3>';
+                       appendHTML = appendHTML + '<div class="content"><p>加载中, 请稍后...</p></div>';
+                       appendHTML = appendHTML + '</div></li>';
+                [% END %]
+            }
+            show = 1;
+        [% END %]
+
+        if ( appendHTML ) { 
+            $('#bookList').append(appendHTML).listview('refresh'); 
+            $('.new-add').collapsible();
+            $(".new-add").collapsible({
+                expand: function( event, ui ) {
+                    ajaxGetSubDetail( $(event.target) );
+                }
+            });
+        }    
+    }
   </script>
+
+
+  <script src="/javascripts/subscribe.min.js"></script>
+
 
 </div>
 

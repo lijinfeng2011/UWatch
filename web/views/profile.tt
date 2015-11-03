@@ -1,4 +1,4 @@
-<div data-role="page" id="profile">
+<div data-role="page" id="profile" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>个人设置</h1>
     <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
@@ -18,81 +18,59 @@
     </div>
 
     <div style="margin: 10px 20px">
-       <div class="mesg-box profile-mesg" style="display: none">
-          <p>个人设置</p>
+       <div class="mesg-box profile-mesg" style="display: none"><p>个人设置</p></div>
+ 
+       <div data-role="collapsible" data-name="basic-change" data-collapsed="false" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:30px 0">
+          <h3 style="margin: 0;">基本信息</h3>
+          <div id="profile-form" class="basic-change">
+             <div data-role="fieldcontain"> 
+                <label for="phone">手机号码</label>
+                <input type="tel" name="phone" value="[% phone %]" placeholder="您的手机号码..">
+             </div> 
+             <div data-role="fieldcontain"> 
+                <label for="address">邮件地址</label>
+                <input type="text" name="address" value="[% address %]" placeholder="您的邮件地址..">
+             </div>
+             <div data-role="fieldcontain"> 
+                <label for="oncaller">接警人员</label>
+                <input type="text" name="oncaller" value="[% oncaller %]" placeholder="接报警人名称..">
+             </div>
+             <div data-role="fieldcontain">
+                <label for="refTime">刷新时间</label>
+                <input type="range" name="refTime" value="[% refTime ? refTime : 60 %]" min="60" max="300">
+             </div>
+             <div data-role="fieldcontain">
+                <label for="following" class="select">跟随关注</label>
+                <select id="following" name="following" data-native-menu="true" multiple="multiple">
+                [% FOREACH person IN followUsers %]
+                   <option value="[% person.name %]" [% person.followed ? ' selected="true"' : '' %]>[% person.name %]</option>
+                [% END %]
+                </select>
+             </div>
+
+             <input type="button" onclick="ajaxSubmitProfile(event)" data-theme="a" value="确定">
+          </div>
        </div>
- 
-       <div id="profile-form">
-           <div data-role="fieldcontain"> 
-               <label for="phone">手机号码</label>
-[% IF phone %]
-               <input type="tel" name="phone" value="[% phone %]">
-[% ELSE %]
-               <input type="tel" name="phone" placeholder="您的手机号码..">
-[% END %]
-           </div> 
-           <div data-role="fieldcontain"> 
-               <label for="address">邮件地址</label>
-[% IF address %]
-               <input type="text" name="address" value="[% address %]">
-[% ELSE %]
-               <input type="text" name="address" placeholder="您的邮件地址..">
-[% END %]
-           </div>
 
-           <div data-role="fieldcontain"> 
-               <label for="oncaller">接警人员</label>
-[% IF oncaller %]
-               <input type="text" name="oncaller" value="[% oncaller %]">
-[% ELSE %]
-               <input type="text" name="oncaller" placeholder="接报警人名称..">
-[% END %]
-           </div>
- 
-           <div data-role="fieldcontain">
-               <label for="refTime">刷新时间</label>
-[% IF refTime %]
-               <input type="range" name="refTime" value="[% refTime %]" min="60" max="300">
-[% ELSE %]
-               <input type="range" name="refTime" value="50" min="60" max="300">
-[% END %]
-           </div>
-
-           <div data-role="fieldcontain">
-               <label for="following" class="select">跟随关注</label>
-               <select id="following" name="following" data-native-menu="true" multiple="multiple">
-[% FOREACH person IN followUsers %]
-                 <option value="[% person.name %]" [% person.followed ? ' selected="true"' : '' %]>[% person.name %]</option>
-[% END %]
-               </select>
-           </div>
-
-           <!--
-           <div data-role="fieldcontain">
-               <label for="select">浏览类型</label>
-               <fieldset data-role="controlgroup">
-                 <label for="selectAll">查看最近一百条报警信息</label>
-                 <input type="radio" name="favor" id="selectAll" value="0" checked="checked">
-                 <label for="cancelAll">仅浏览未查看的报警信息</label>
-                 <input type="radio" name="favor" id="cancelAll" value="1">
-               </fieldset>
-           </div>
-
-           <div data-role="fieldcontain">
-               <label for="flip-checkbox">停止报警:</label>
-               <input data-role="flipswitch" name="flip-checkbox" id="flip-checkbox" type="checkbox">
-           </div>
-           --!>
-
-         <input type="button" onclick="ajaxSubmitProfile(event)" data-theme="a" value="确定">
+      <div style="margin:30px 0">
+         <div data-role="collapsible" data-name="alarm-change" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:30px 0">
+         <h3 style="margin: 0;">报警信息</h3>
+         <div class="alarm-change">
+            <fieldset data-role="controlgroup">
+               <input type="checkbox" name="stopAlarm" id="stopAlarm" onclick="triggerAlarm()" [% stopAlarm ? '' : "checked='checked'" %] >
+               <label for="stopAlarm" id="alarmValue">接收报警信息</label>
+               <input type="checkbox" name="fullFormat" id="fullFormat" onclick="triggerFormat()" [% fullFormat ? "checked='checked'" : '' %] >
+               <label for="fullFormat" id="formatValue">接收详细信息</label>
+            </fieldset>
+         </div>
       </div>
 
-      <div data-role="collapsible" class="pwd-collapse" data-name="pwd-change" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style = "margin:30px 0">
+      <div data-role="collapsible" class="pwd-collapse" data-name="pwd-change" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:30px 0">
          <h3 style="margin: 0;">修改密码</h3>
          <div class="pwd-change">
             <div class="change-box mesg-box" style="display:none"></div>
             <input type="password" name="old-pwd" placeholder="输入旧密码..">
-            <input type="password" name="new-pwd" placeholder="输入旧密码..">
+            <input type="password" name="new-pwd" placeholder="输入新密码..">
             <input type="password" name="confirm-pwd" placeholder="再次输入新密码..">
             <input type="button" onclick="ajaxChangePWD(event)" data-theme="a" value="确定修改">
          </div>
@@ -101,139 +79,20 @@
     </div>
   </div>
 
-  <div data-role="footer" data-position="fixed" data-id="main-tabbar" data-fullscreen="true" data-theme="b">
-    <div data-role="navbar">
-      <ul>
-        <li><a href="#pageGlance" data-icon="grid" data-transition="slide" data-direction="reverse">浏览报警</a></li>
-        <li><a href="/subscribe" data-icon="plus" data-transition="slide" data-direction="reverse">订阅监控</a></li>
-        <li><a href="#" data-icon="gear" class="ui-btn-active ui-state-persist">个人设置</a></li>
-      </ul>
-    </div>
-  </div>
+  <style type="text/css" media="all">
+     @media (min-width: 28em) {
+        .ui-field-contain>label, 
+        .ui-field-contain .ui-controlgroup-label, 
+        .ui-field-contain>.ui-rangeslider>label {
+           width: 10%;
+        }
+        .ui-field-contain>label~[class*=ui-], 
+        .ui-field-contain .ui-controlgroup-controls {
+           width: 88%;
+        }
+     }
+  </style>
 
-<script type="text/javascript">
-    function ajaxSubmitProfile( event ) {
-        var param = ""; var follows = "";
-        var $targetForm = $(event.target).closest('#profile-form');
-
-        $.each ( $targetForm.find('input'), function(n, input) { 
-           var type = $(input).attr('type');
-           var value = $(input).val();
-
-           if ( type == 'tel' && !value.match( /^0?1[3|4|5|8][0-9]\d{8}$/ ) ) {
-               alert ("请输入正确的手机号码");
-               return false;
-           }
-
-           if ( type == 'tel' || type == 'text' || type == 'number' ) {
-               if ( $(input).val().length === 0 ) { alert('请填写完整'); return false; }
-               var token = param ? '&' : '?';
-               token = token + $(input).attr("name") + "=" + $(input).val();
-               param = param + token;
-	   }
-        });
-    
-        $.each ( $targetForm.find('option:selected'), function(n, option) {
-            if ( follows.length ) { follows = follows + ':' + $(option).val(); }
-            else { follows = follows + $(option).val(); }
-        });
-
-        if ( follows.length ) { param = param + '&follower=' + follows; }
-
-        $.ajax({
-            timeout:     3000,
-            async:       true, 
-            dataType:    "json",
-            url:         "/ajaxSetProfile" + param,
-            beforeSend:  showLoader,
-            success:     function ( data ) {
-                             var responseHTML = '';
-                             if ( data.response === 1 ) {
-                                 responseHTML = '<p>设置失败，请稍后再试!</p>';
-                             } else if ( data.response === 0 ) {
-                                 responseHTML = '<p>设置成功!</p>';
-                             }
-                             $('.profile-mesg').html( responseHTML );
-                         },
-            error:       function (XMLHttpRequest, textStatus, errorThrown) {
-                             $('.profile-mesg').html('<p>链接失败，请稍后再试!</p>');
-                         },
-            complete:    function () {
-                             $('.profile-mesg').show();
-                             hideLoader();
-                         },
-        });
-    }
-
-    function ajaxChangePWD( event ) {
-        if ( $('input[name="new-pwd"]').val() != $('input[name="confirm-pwd"]').val() )
-        { alert('两次输入新密码不一样'); return false; }
-       
-        var shouldReturn = false;
-                                                                                   
-        $.each ( $('input[type="password"]'), function(n, input) {
-           var value = $(input).val();
-
-           if ( value.length < 6 ) { alert('长度不小于6位'); shouldReturn = true; return false; }
-          
-           var reg = new RegExp("[a-zA-Z]");
-           if ( !reg.test(value) ) { alert('至少包含一个字母'); shouldReturn = true; return false; }
-
-           reg = new RegExp("[0-9]");
-           if ( !reg.test(value) ) { alert('至少包含一个数字'); shouldReturn = true; return false; }
-
-           //reg = new RegExp("((?=[x21-x7e]+)[^A-Za-z0-9])");
-           reg = new RegExp("[/#?@]");
-           if ( reg.test(value) ) { alert('不能包含/#?@符号'); shouldReturn = true; return false; }
-        });
-
-        if ( shouldReturn ) { return false; }
-
-        var param = '?old=' + $('input[name="old-pwd"]').val() + '&new=' + $('input[name="new-pwd"]').val();
-
-        $.ajax({                                         
-            timeout:     3000,                                                                         
-            async:       true,                                                                         
-            dataType:    "json",                                                                       
-            url:         "/ajaxChangePWD" + param,
-            beforeSend:  showLoader,
-            success:     function ( data ) { 
-                             var responseHTML = '';
-                             if ( data.response === 1 ) {
-                                 responseHTML = '<p>修改失败，稍后再试!</p>';
-                             } else if ( data.response === 0 ) {
-                                 responseHTML = '<p>修改成功!</p>';
-                             } else if ( data.response === 2 ) {
-                                 responseHTML = '<p>原始密码错误</p>'
-                             }
-                             $('.change-box').html( responseHTML );
-                         },
-            error:       function (XMLHttpRequest, textStatus, errorThrown) {
-                             $('.change-box').html('<p>链接失败，稍后再试!</p>');
-                         },
-            complete:    function () {
-                             $('.change-box').show();
-                             hideLoader();
-                         },
-        }); 
-    }
-
-    function showLoader() {
-        $.mobile.loading('show', {
-            text: '数据加载中，请稍候',
-            textVisible: true,
-            dataType: "json",
-            theme: 'a',
-            textonly: false,
-            html: ""
-        });
-    }
-
-    function hideLoader() {
-        $.mobile.loading('hide');
-    }
-
-</script>
-
+  <script src="/javascripts/profile.js"></script>
 </div>
 

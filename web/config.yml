@@ -29,6 +29,7 @@ engines:
 
 session: "YAML"
 session_dir: "/tmp/ns-dancer-sessions"
+session_expires: 24 hour
 
 plugins:
   Database:

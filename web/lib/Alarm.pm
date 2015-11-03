@@ -26,6 +26,7 @@ sub Login {
     else  { return 2; }
 }
 
+
 sub GetAllUsers {
     my $url = sprintf( "%s/user/list", $server );
     my ( $response, $content, @users );
@@ -41,6 +42,7 @@ sub GetAllUsers {
     return \@users;
 }
 
+
 sub GetAllItems {
     my $url = sprintf ( "%s/item/list", $server ); 
     my ( $response, $items ); @allItems = ();
@@ -52,6 +54,7 @@ sub GetAllItems {
     }
 }
 
+
 sub GetSubItems {
     my ( $user,  $response, $items ) = @_; @subItems = ();
     my $url = sprintf ( "%s/relate/list4user/%s", $server, $user );
@@ -62,6 +65,7 @@ sub GetSubItems {
         @subItems = sort split ( '\n', $items ) if $items;
     }
 }
+
 
 sub GetAllAlarmItem {
     GetAllItems();
@@ -110,6 +114,7 @@ sub GetSubscribeDetail {
     return \@items;
 }
 
+
 sub BookSubscribeItems {
     my ( $param, $user ) = @_;
 
@@ -143,6 +148,7 @@ sub BookSubscribeItems {
     return 0;
 }
 
+
 sub GetMessageGroup {
     my ( $user, @mesgGroup ) = @_;
 
@@ -151,31 +157,42 @@ sub GetMessageGroup {
     foreach my $msg ( @subItems ) { 
         my @sp = split ( ':', $msg);
         next unless scalar @sp == 3;
-        push @mesgGroup, { name => $sp[1], count => $sp[2] } if $sp[2] > 0;
+
+        if ( $sp[2] > 999 ) {
+            push @mesgGroup, { name => $sp[1], count => '999+' };
+        } else {
+            push @mesgGroup, { name => $sp[1], count => $sp[2] };
+        }
     }
 
     return \@mesgGroup;   
 }
 
+
 sub GetMessageDetail {
-    my ( $group, $user, $response, @mesgDetail ) = @_;
-    my $url = sprintf ( "%s/user/mesg/%s/%s", $server, $user, $group );
+    my ( $user, $group, $pos, $type, $limit, $response, @mesgDetail ) = @_;
+
+    my $url = sprintf ("%s/user/mesg/%s/%s/%s/%s/%s", $server, $user, $group, $pos, $type, $limit);
 
     eval { $response = $userAgent->get( $url ) };
     unless ( $@ ) { 
         my $items = $response->content if $response->is_success;
-        my @tmp = sort split ( '\n', $items ) if $items;
+        my @tmp = split ( '\n', $items ) if $items;
 
+        my ( $idx, $msg, $node );
         foreach my $tmp ( @tmp ) {
-            if ( $tmp =~ m/^(\d)\*(\d+)\*(.+)$/ ) {
-                next unless $1;
-                push @mesgDetail, $3;
+            if ( $tmp =~ m/^\*(\d+)\*(.+)$/ ) {
+                $idx = $1; 
+                $msg = $2;
+                $msg =~ m/ ([\w\._@-]+)#/;                
+                push @mesgDetail, { idx => $idx, content => $msg, node => $1 };
             }
         } 
     }
 
     return \@mesgDetail;
 }
+
 
 sub SetProfile {
     my ( $param, $user, $response ) = @_;
@@ -200,6 +217,7 @@ sub SetProfile {
     return 0;
 }
 
+
 sub GetProfile {
     my ( $response, $items, @items );
     my $url = sprintf( "%s/user/getinfo/%s", $server, shift ); 
@@ -213,6 +231,7 @@ sub GetProfile {
 
     return \@items;
 }
+
 
 sub GetFollowUsers {
     my ( $response, $items ); my @items = [];
@@ -228,8 +247,9 @@ sub GetFollowUsers {
     return \@items;
 }
 
+
 sub ChangePWD {
-    my ( $user, $old, $new, $response, $content ) = @_;     
+    my ( $user, $old, $new, $response ) = @_;     
     my $url = sprintf ( "%s/user/changepwd/%s/%s/%s", $server, $user, $old, $new );
     
     return 1 if length( $new ) < 6 || $new !~ m/[a-zA-Z]/ || $new !~ m/[0-9]/; 
@@ -241,13 +261,71 @@ sub ChangePWD {
     
     return 1 unless $response->is_success;
   
-    $content = $response->content; chomp( $content );
+    my $content = $response->content; chomp( $content );
 
     return 1 if $content eq 'set failed';
 
     return 2 if $content eq 'auth failed';
 
     return 0 if $content eq 'success';
+}
+
+
+sub SetFilterMessage {
+    my ( $user, $name, $node, $response ) = @_;
+    my $url = sprintf ( "%s/filter/add/%s/%s/%s", $server, $user, $name, $node );
+
+    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    return 1 unless $response->is_success;
+
+    my $content = $response->content; chomp( $content ); 
+    return 0 if $content eq 'ok';
+
+    return 1;
+}
+
+
+sub GetNotifyInfo {
+    my ( $user, $type, $url, $response ) = @_;
+    $url = sprintf( "%s/notify/getstat/%s", $server, $user ) if $type eq 'Alarm';
+    $url = sprintf( "%s/detail/getstat/%s", $server, $user ) if $type eq 'Format';
+
+    eval { $response = $userAgent->get( $url ) }; if ($@) { return 'error'; }
+
+    return 'error' unless $response->is_success;
+
+    my $content = $response->content; chomp( $content );
+    return $content;
+}
+
+
+sub SetNotifyInfo {
+    my ( $user, $type, $stat, $response, $url ) = @_;
+    if ( $type eq 'Alarm' ) {
+        $url = sprintf( "%s/notify/setstat/%s/%s", $server, $user, $stat );
+    } elsif ( $type eq 'Format' ) {
+        $url = sprintf( "%s/detail/setstat/%s/%s", $server, $user, $stat );
+    }
+
+    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    return 1 unless $response->is_success;
+
+    my $content = $response->content; chomp( $content );
+
+    return 0 if $content eq 'ok';
+
+    return 1;
+}
+
+sub GetUserViaToken {
+    my $url = sprintf ( "%s/token/search/%s", $server, shift ); my $response;
+
+    eval { $response = $userAgent->get( $url ) }; if( $@ ) { return 'error'; }
+    return 'error' unless $response->is_success;
+
+    my $content = $response->content; chomp( $content );
+
+    return $content;
 }
 
 1;

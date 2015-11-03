@@ -22,14 +22,27 @@ hook 'before' => sub {
 };
 
 get '/' => sub {
-    redirect '/homepage';
+    if ( session('mobile_user') ) {
+        redirect '/glance';
+    } else {
+        redirect '/homepage';
+    }
 };
 
 get '/homepage' => sub {
     my %param = %{request->params};
+
+    # Access via with token;
+    if ( $param{token} ) {
+        my $user = Alarm::GetUserViaToken( $param{token} );
+        if ( $user && $user ne 'error' ) { 
+            session 'mobile_user' => $user;  
+            redirect 'glance';
+        } 
+    }
  
     if ( session('mobile_user') ) {
-        redirect 'glance';
+        redirect '/glance';
     } else {
         template 'homepage.tt', { status => $param{error} };
     }
@@ -91,19 +104,26 @@ get '/subscribe' => sub {
 
         $countMap->{$_} = scalar keys %{$response->{$group}};
     } @{$response->{name}};
-
-    return template 'subscribe.tt', { user => session('mobile_user'), groupMap => $groupMap, countMap => $countMap };
+    
+    template 'subscribe.tt', { user => session('mobile_user'), groupMap => $groupMap, countMap => $countMap };
 };
 
 get '/mesgDetail' => sub {
     my %param = %{request->params};
-    my $message = Alarm::GetMessageDetail( $param{id}, session('mobile_user') );
-    template 'mesgDetail.tt', { mesgs => $message, count => scalar @$message, hermes => $param{id} };
+    my $message;
+    if ( $param{type} eq 'old' ) {
+        $message = Alarm::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'tail', 100 );
+    } else {
+        $message = Alarm::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'head', 100 );
+    }
+    template 'mesgDetail.tt', { mesgs => $message, count => scalar @$message, hermes => $param{id}, oldview => $param{type} eq 'old' ? 1 : 0 };
 };
 
 get '/profile' => sub {
     my $users = Alarm::GetAllUsers(); my @followUsers = ();
     my $follower = Alarm::GetFollowUsers( session('mobile_user') );
+    my $stopAlarm = Alarm::GetNotifyInfo( session('mobile_user'), 'Alarm' );
+    my $fullFormat = Alarm::GetNotifyInfo( session('mobile_user'), 'Format' );
 
     map {
         my $user = $_; 
@@ -120,6 +140,10 @@ get '/profile' => sub {
         $options{oncaller} = $profileItems->[2];
         $options{refTime} = $profileItems->[3];
     }
+
+    $options{stopAlarm} = $stopAlarm eq 'off' ? 1 : 0;
+
+    $options{fullFormat} = $fullFormat eq 'on' ? 1 : 0;
 
     template 'profile.tt', \%options;
 };
@@ -164,6 +188,44 @@ any ['get', 'post'] => '/ajaxChangePWD' => sub {
     to_json({ response => $response });
 };
 
+any ['get', 'post'] => '/ajaxGetMessage' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params}; my $response;
+
+    if ( $param{type} eq 'new' ) {
+        $response = Alarm::GetMessageDetail(session('mobile_user'), $param{id}, 'curr', 'head', 'all');
+    }
+    elsif ( $param{type} eq 'old' ) {
+        $response = Alarm::GetMessageDetail(session('mobile_user'), $param{id}, $param{pos}, 'tail', 100);
+    }
+    
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxSetFilterMessage' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::SetFilterMessage( session('mobile_user'), $param{name}, $param{node} );
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxSetAlarm' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Alarm', $param{value} );
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxSetFormat' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Format', $param{value} );
+    to_json({ response => $response });
+};
 
 true;
 

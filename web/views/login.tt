@@ -12,11 +12,18 @@
         <input type="password" name="lpwd" id="lpwd" placeholder="您的登录密码..">
       </div>
       <div data-role="controlgroup" data-type="horizontal">
-        <input type="submit" data-inline="true" value="登录">
+        <input type="submit" data-inline="true" value="登录" onclick="login(event)">
         <input type="submit" data-inline="true" value="取消">
       </div>
     </form>
   </div>
+
+  <script>
+  function login( event ) {
+      var pwd = $.md5( $('input[name="lpwd"]').val() );
+      $('input[name="lpwd"]').val(pwd);
+  }
+  </script>
 
   <div data-role="footer">
   </div>

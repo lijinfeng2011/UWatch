@@ -1,19 +1,37 @@
 <div data-role="page" id="mesgDetail">
-  <div data-role="header" data-theme="b" data-fullscreen="true">
+  <link rel="stylesheet" href="/css/mesgDetail.min.css" />
+
+  <div data-role="header" data-position="fixed" data-theme="b">
     <a href="#pageGlance" data-role="button" data-transition="flip">返回</a>
     <h2>报警详情</h2>
   </div>
 
-  <div data-role="content">
-    <div style="margin:10px 0;word-break:break-all;">
-       <h3>报警详情: 共[% count %]条 </h3>
-       <h3>[% hermes %]</h3>
-       <hr />
-[% FOREACH message IN mesgs %]
-       <p> [% message %] </p>
-[% END %]
+  <div data-role="content" data-theme="d">
+    <div id="wrapperContent1" class="wrapper">
+      <div id="scrollerContent1" class="scroller">
+        <div id="pullDown">
+          <span class="pullDownIcon"></span><span class="pullDownLabel">下拉获取最新数据...</span>
+        </div>
+        
+        <div class="listHeader">	
+        <h3 >报警详情: 共<span class="count">[% count %]</span>条 </h3>
+        <h3 class="hermesName">[% hermes %]</h3>
+        </div>
+
+        <ul data-role="listview" id="contentList1" class="contentList">
+	  [% FOREACH message IN mesgs %]
+            <li data-swipeurl="#" [% oldview ? 'class="gary"' : '' %]><span class="index hide">[% message.idx %] </span><span class="node hide">[% message.node %]</span>[% message.content %]</li>
+          [% END %] 
+	</ul>
+	
+        <div id="pullUp">
+          <span class="pullUpIcon"></span><span class="pullUpLabel">上拉获取历史数据...</span>
+        </div>
+      </div>
     </div>
   </div>
 
+  <script src="/javascripts/lib/iscroll.min.js"></script>
+  <script src="/javascripts/lib/jquery.swipeButton-1.2.1.min.js"></script>
+  <script src="/javascripts/mesgDetail.min.js"></script>
 </div>
-

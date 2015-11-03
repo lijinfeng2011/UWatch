@@ -3,14 +3,18 @@
 <head>
     <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
     <link rel="stylesheet" href="/css/glance.css">
+    <link rel="stylesheet" href="/css/jquery.swipeButton.css" />
     <meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1.0, initial-scale=1.0,">
-    <script src="/jquery.mobile-1.4.3/jquery.min.js"></script>
-    <script src="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.js"></script>
-    <script src="/javascripts/glance.min.js"></script>
+    <script src="/javascripts/lib/jquery.min.js"></script>
+    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.js"></script>
+    <script src="/javascripts/lib/jquery.md5.min.js"></script>
+
+    <script src="/javascripts/global.js"></script>
+    <script src="/javascripts/glance.js"></script>
 </head>
 
 <body>
-<div data-role="page" id="pageGlance" data-dom-cache="true">
+<div data-role="page" id="pageGlance" data-dom-cache="true" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>浏览报警</h1>
     <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
@@ -34,8 +38,10 @@
 
        <ul id="mainList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索" data-split-theme="a">
      [% FOREACH msgGroup IN mesgGroup %]
-           <li name="[% msgGroup.name %]"><a href="/mesgDetail?id=[% msgGroup.name %]" class="message-link" data-transition="flip">[% msgGroup.name %]</a>
-               <a href="#" class="status-icon" data-icon="alert"></a>
+           <li name="[% msgGroup.name %]" data-icon="false">
+               <a href="/mesgDetail?type=new&id=[% msgGroup.name %]" class='message-link' data-transition="flip">[% msgGroup.name %]</a>
+               <span class='ui-li-count'>[% msgGroup.count %]</span>
+               <!-- <a href="#" class="status-icon" data-icon="alert"></a> --!>
            </li>
      [% END %]
        </ul>
@@ -43,15 +49,6 @@
     </div>
   </div>
 
-  <div data-role="footer" data-position="fixed" data-id="main-tabbar" data-fullscreen="true" data-theme="b">
-    <div data-role="navbar">
-      <ul>
-        <li><a href="#" data-icon="grid" class="ui-btn-active ui-state-persist">浏览报警</a></li>
-        <li><a href="/subscribe" data-icon="plus" data-transition="slide">订阅监控</a></li>
-        <li><a href="/profile" data-icon="gear" data-transition="slide">个人设置</a></li>
-      </ul>
-    </div>
-  </div>
 </div>
 
 </body>

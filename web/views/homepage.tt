@@ -4,13 +4,15 @@
     <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
     <link rel="stylesheet" href="/css/glance.css">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0">
-    <script src="/jquery.mobile-1.4.3/jquery.min.js"></script>
-    <script src="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.js"></script>
-    <script src="/javascripts/glance.min.js"></script>
+    <script src="/javascripts/lib/jquery.min.js"></script>
+    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.js"></script>
+    <script src="/javascripts/lib/jquery.md5.min.js"></script> 
+    <script src="/javascripts/global.js"></script>
+    <script src="/javascripts/glance.js"></script>
 </head>
 
 <body>
-<div data-role="page" id="pageHomepage">
+<div data-role="page" id="pageHomepage" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>报警订阅系统</h1>
     <a href="/login" data-rel="dialog" data-icon="home" class="ui-btn-right">登录</a>
@@ -42,15 +44,6 @@
     <input type="hidden" name='_token' value="[% token %]">
 [% END %]
 
-  <div data-role="footer" data-position="fixed" data-id="main-tabbar" data-theme="b" data-fullscreen="true">
-    <div data-role="navbar">
-      <ul>
-        <li><a href="/login" data-rel="dialog" data-icon="grid">浏览报警</a></li>
-        <li><a href="/login" data-rel="dialog" data-icon="plus">订阅监控</a></li>
-        <li><a href="/login" data-rel="dialog" data-icon="gear">个人设置</a></li>
-      </ul>
-    </div>
-  </div>
 </div> 
 
 </body>

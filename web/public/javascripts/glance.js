@@ -1,45 +1,24 @@
-( function($) {
-
+(function($) {
     var timer = null;
 
-    $(document).on('pagebeforeshow', "#pageHomepage", function() {
-        window.history.replaceState(null, null, '/');
-    });
-
-    $(document).on('pagebeforeshow', "#pageSubscribe", function() {
-        window.history.replaceState(null, null, '/');
-    });
-
     $(document).on("pagebeforeshow", "#pageGlance", function() {
-        window.history.replaceState(null, null, '/');
-
         $(".message-link").unbind( 'click' )
                           .bind( 'click', getMessageDetail );
-
-        timer = setTimeout( ajaxGetMessageGroup, 10000 );
-    });
-
-    $(document).on('pagebeforeshow', "#mesgDetail", function() {
-        window.history.replaceState(null, null, '/');
-    });
-
-    $(document).on('pagebeforeshow', "#pageLogin", function() {
-        window.history.replaceState(null, null, '/');
-    });
-
-    $(document).on('pagebeforeshow', "#profile", function() {
-        window.history.replaceState(null, null, '/');
+        timer = setTimeout( ajaxGetMessageGroup, 1000 );
     });
 
     $(document).on("pagebeforehide", "#pageGlance", function() {
-        clearTimeout( timer );
+        if ( timer ) clearTimeout( timer );
     });
 
     function getMessageDetail ( event ) {
-        var $icon = $(event.target).closest('li').find('.status-icon');
-        $icon.removeClass('ui-icon-alert')
-             .removeClass('ui-icon-info')
-             .addClass('ui-icon-check');
+        var $row = $(event.target).closest('li');
+        var $number = $row.find('.ui-li-count');
+        $row.removeClass('disable-font').addClass('disable-font');
+        $row.find('a').removeClass('disable-font').addClass('disable-font'); 
+        $number.text("0")
+               .removeClass('zero-number disable-font')
+               .addClass('zero-number disable-font');
     }
 
     function ajaxGetMessageGroup () {
@@ -48,32 +27,36 @@
            async:     true,
            dataType:  "json",
            url:       "/ajaxGetMessageGroup",
-           success:   function ( data ) { 
-                         // remove already read item;
-                         $('.ui-icon-check').closest('li').remove(); 
-
-                         // change data-theme;
-                         $('.status-icon').removeClass('ui-icon-alert').addClass('ui-icon-info');
+           success:   function ( data ) {
+                         $('#mainList').empty(); 
+//                         $('#mainList li').remove();
 
                          if ( data.mesgGrp != null && data.mesgGrp.length > 0 ) {
-                            // add new items;
-                            $.each (data.mesgGrp, function( n, mesg ) {
-                               var $newItem = $('li[name="' + mesg.name + '"]');
-                               $newItem.length && $newItem.remove();
-                               var newHTML = '<li name="' + mesg.name + '"><a href="/mesgDetail?id=' + mesg.name + '" class="message-link" data-transition="flip">' + mesg.name + '</a><a href="#" class="status-icon" data-icon="alert"></a></li>'; 
-                               $('#mainList').prepend(newHTML).listview('refresh');
-                            });
+                            $('.mesg-box').hide(); 
+                            var newHTML = '', oldHTML = '', contentHTML = '',
+                                $mainlist = $('#mainList');
 
-                           // bind click function 
-                           $(".message-link").unbind( 'click' ).bind( 'click', getMessageDetail );
-                           $('.mesg-box').hide(); 
+                            $.each (data.mesgGrp, function( n, mesg ) {
+                                if ( mesg.count == 0 ) {
+                                   oldHTML = oldHTML + '<li data-icon="false" name="' + mesg.name + '"><a href="/mesgDetail?type=old&id=' + mesg.name + '" class="message-link disable-font" data-transition="flip">' + mesg.name + '</a><span class="ui-li-count disable-font">old</span></li>'; 
+                                } else {
+                                   newHTML = newHTML + '<li data-icon="false" name="' + mesg.name + '"><a href="/mesgDetail?type=new&id=' + mesg.name + '" class="message-link" data-transition="flip">' + mesg.name + '</a><span class="ui-li-count">' + mesg.count  + '</span></li>'; 
+                                }
+                            });
+                            if ( newHTML.length ) contentHTML = newHTML;
+                            if ( oldHTML.length ) contentHTML = contentHTML + oldHTML;
+                            if ( contentHTML.length )  $mainlist.append( contentHTML ); 
+                            $mainlist.listview('refresh');
+                           // $mainlist.trigger('create').listview('refresh');
+
+                           $(".message-link").unbind('click').bind( 'click', getMessageDetail );
                          } else {
-                           var contentHtml = '<p>没有报警信息!</p>'; 
+                           var contentHtml = '<p>无最新报警信息!</p>'; 
                            $('.mesg-box').html(contentHtml).show();
                          }
                       },
            error:     function( XMLHttpRequest, textStatus, errorThrown ) {
-                          var contentHtml = '<p>网络连接失效，无法获取最新信息!</p>';               
+                          var contentHtml = '<p>网络连接失效，无法获取最新信息!</p>'; 
                           $('.mesg-box').html(contentHtml).show();
                       },
            complete:  function () {
