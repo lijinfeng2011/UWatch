@@ -3,7 +3,9 @@
 
 add( ITEM, USER ) ->
   watch_db:add_relate(ITEM, USER),
-  watch_item:add(ITEM).
+  watch_item:add(ITEM),
+  PubIndex = watch_item:getindex(ITEM),
+  watch_user:setindex( USER, ITEM, PubIndex ).
 
 del( ITEM, USER ) -> watch_db:del_relate(ITEM, USER).
 

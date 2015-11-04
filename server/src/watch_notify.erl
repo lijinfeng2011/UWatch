@@ -65,7 +65,9 @@ notify( User, AlarmList ) ->
                     { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count }
                 end, 
             AlarmList),
-            AlarmList3 = lists:map( fun(X) -> {N,_} = X, N end,lists:filter( fun(X) -> {_,C} = X, C > 0 end, AlarmList2 )),
+            AlarmList3 = lists:map( 
+                fun(X) -> {N,_} = X, N end,lists:filter( fun(X) -> {_,C} = X, C > 0 end,
+            AlarmList2 )),
             case length( AlarmList3 ) > 0 of
                 true -> 
                     Info = string:join( AlarmList3, "@@@" ),
@@ -89,4 +91,4 @@ send( User, Token, UserInfo, Info, Method, Detail ) ->
 
 setstat(User,Stat) -> watch_db:set_notify(User,Stat).
 getstat(User) -> watch_db:get_notify(User).
-liststat() -> lists:map( fun(X) -> {N,S} =X, N++":"++S end,watch_db:list_notify()).
+liststat() -> lists:map( fun(X) -> {N,S} =X, N++":"++S end, watch_db:list_notify()).
