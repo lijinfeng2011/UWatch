@@ -11,27 +11,26 @@ start(Port) ->
   register(accept_filter,P),
 
   {ok, LSocket} = gen_tcp:listen(Port, ?TCP_OPTIONS),
-  io:format("port:~w~n", [Port]),
+  io:format("[INFO] server listen: ~w~n", [Port]),
   do_accept(LSocket).
 
 do_accept(LSocket) ->
   case gen_tcp:accept(LSocket) of
       {ok, Socket} ->
- 
           case inet:peername(Socket) of 
               {ok, {Address,_}} -> IP_Address = Address;
               _ -> IP_Address = '0.0.0.0'
           end,
           case watch_auth:check_ip( IP_Address ) of
             true -> 
-              io:format("[WARM] wolcome:~p~n", [ IP_Address ] ),
+              io:format("[INFO] accept:~p~n", [ IP_Address ] ),
               spawn(fun() -> handle_client(Socket) end);
             false ->
-              io:format("[WARM] IP_Address:~p deny~n", [ IP_Address ] ),
+              io:format("[WARM] deny: ~p~n", [ IP_Address ] ),
               gen_tcp:send( Socket, "deny" ),
               gen_tcp:close( Socket )
        end;
-       {error, Reason} -> io:format( "~p~n", Reason )
+       {error, Reason} -> io:format( "[ERROR] accept fail ~p~n", Reason )
    end,
    do_accept(LSocket).
 
@@ -45,7 +44,7 @@ handle_client(Socket) ->
          gen_tcp:send( Socket, watch_api:call( string:tokens( DATA, "/" ) )),
          gen_tcp:close( Socket );
     {error, closed} ->
-      io:format( "register fail" )
+      io:format( "[ERROR] register fail" )
   end.
 
 handle_item( Socket ) ->
@@ -61,16 +60,18 @@ filter() ->
   Broken = watch_broken:listbroken(),
   L = sets:to_list(sets:from_list(lists:append(Filter,Broken))),
   try
-    accept_manager ! { filter, L}
+    accept_manager ! { filter, L }
   catch
-    error:badarg -> io:format("send filter to main fail~n")
+    error:badarg -> io:format( "[ERROR] send filter to main fail~n" )
   end,
   timer:sleep(5000),
   filter().
 
 manage(Filter) ->
   receive
-    { filter, List } -> manage( List );
+    { filter, List } -> 
+        io:format( "[INFO] main filter is change~n" ),
+        manage( List );
     { data, Data } ->
       DATA = string:tokens(Data,"#"),
       case length(DATA) > 2 of
@@ -81,7 +82,7 @@ manage(Filter) ->
                   DD = string:join(D,"#"),
                   MATCH = lists:filter(fun(X) -> re:run(DD, X) /= nomatch end, Filter),
                   case length( MATCH ) > 0 of
-                    true -> io:format("main filter:~p~n",[DD]);
+                    true -> io:format("[INFO] main filter:~p~n",[DD] );
                     false ->
                       NAME = list_to_atom( "item_list#"++ ITEM ),
                       try
@@ -93,6 +94,6 @@ manage(Filter) ->
                   false -> false
               end;
           false -> false
-      end
-  end,
-  manage(Filter).
+      end,
+      manage(Filter)
+  end.

@@ -39,9 +39,9 @@ mon() ->
                       Index = watch_db:get_item(X),
                       Pid = spawn(fun() -> stored(X,MLog, CLog,queue:new(),Index,queue:new(),[]) end),
                       register( ITEM, Pid );
-                     _ -> io:format( "start item:~p err~n", [ X] ), watch_disk_log:close(MLog)
+                     _ -> io:format( "[ERROR] start item:~p fail~n", [X] ), watch_disk_log:close(MLog)
                   end;
-               _ -> io:format( "start item:~p err~n", [ X] )
+               _ -> io:format( "[ERROR] start item:~p fail~n", [X] )
              end;
            false -> false
          end
@@ -83,7 +83,7 @@ filter() ->
       try
         ITEM ! { filter, FilterCont }
       catch
-        error:badarg -> io:format("send filter to item ~p fail~n", [ItemName] )
+        error:badarg -> io:format("[ERROR] send filter to item ~p fail~n", [ItemName] )
       end
 
     end
@@ -97,7 +97,7 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
     { "data", Data } ->
         MATCH = lists:filter(fun(X) -> re:run(Data, X) /= nomatch end, Filter),
         case length(MATCH) > 0 of
-            true -> io:format("~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewQ = Q;
+            true -> io:format("[INFO] ~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewQ = Q;
             false ->
                 NewQ = queue:in(Data,Q),
                 NewIndex = Index +1,

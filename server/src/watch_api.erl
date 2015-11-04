@@ -57,6 +57,7 @@ api(List) ->
     ["notify","setstat",USER,STAT] -> watch_notify:setstat(USER,STAT),  ["ok"];
     ["notify","getstat",USER] -> [ watch_notify:getstat(USER) ];
     ["notify","liststat"] ->  watch_notify:liststat();
+    ["notify","test",USER] ->  watch_notify:notify( USER ), ["ok"];
 
     ["detail","setstat",USER,STAT] -> watch_detail:setstat(USER,STAT),  ["ok"];
     ["detail","getstat",USER] -> [ watch_detail:getstat(USER) ];

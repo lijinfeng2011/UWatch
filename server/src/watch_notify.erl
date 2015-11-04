@@ -35,9 +35,7 @@ stored(Log) ->
   stored(Log).
 
 notify( User, AlarmList ) ->
-    inets:start(),
-    ssl:start(),
-    [UserInfo] = watch_user:getinfo(User),
+    UserInfo = watch_user:getinfo(User),
     Method = watch_method:getmethod( User ),
     Token = watch_token:add(User),
     case watch_detail:getstat( User ) of
@@ -76,16 +74,30 @@ notify( User, AlarmList ) ->
             end
     end.
 
+notify( User ) ->
+    UserInfo = watch_user:getinfo(User),
+    Method = watch_method:getmethod( User ),
+    Token = watch_token:add(User),
+    io:format( "[INFO] test notify for: ~p~n", [User] ),
+    case watch_detail:getstat( User ) of
+        [ "on" ] -> Stat = "1";
+        _ -> Stat = "0"
+    end,
+    send( User, Token, UserInfo, "uwatch test 测试", Method, Stat ).
+
 send( User, Token, UserInfo, Info, Method, Detail ) ->
+    inets:start(),
+    ssl:start(),
     MesgNotify = lists:concat(
-        ["user=" ,User ,"&method=",Method,"&token=",Token,"&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
+        ["user=" ,User ,"&method=",Method,"&token=",Token,
+         "&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
     ),
-    io:format("notify:~p~n", [MesgNotify]),
+    io:format("[INFO] notify send:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
       [],"application/x-www-form-urlencoded", MesgNotify },[],[]
       ) of
       {ok, {_,_,Body}}-> Body, Stat = "ok";
-      {error, Reason}->io:format("error cause ~p~n",[Reason]), Stat = "fail"
+      {error, Reason}->io:format("[ERROR] send fail cause ~p~n",[Reason]), Stat = "fail"
     end,
     notify_stored ! { User ++ ":" ++ Info ++ ":" ++ Stat }.
 

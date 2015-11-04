@@ -27,7 +27,7 @@ start() ->
 
 init() ->
     NodeList = [node()],
-    io:format("~p~n", NodeList ),
+    io:format("[INFO] mnesia Node ~p~n", NodeList ),
     mnesia:create_schema(NodeList),
     mnesia:start(),
     mnesia:create_table(item,[{attributes,record_info(fields,item)},{disc_copies, NodeList} ]),

@@ -50,7 +50,11 @@ setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, I
 getindex( User, Item )        -> watch_db:get_userindex( User ++ "##" ++ Item ).
 
 setinfo( User, Info )  -> watch_db:set_user_info( User, Info ).
-getinfo( User )        -> watch_db:get_user_info( User ).
+getinfo( User )        -> 
+  case watch_db:get_user_info( User ) of
+    [I] -> I;
+    _ -> ""
+  end.
 
 getinterval( User ) ->
   [Info] = watch_db:get_user_info(User),
@@ -158,11 +162,11 @@ refresh() ->
          case whereis( USER ) =:= undefined of
            true ->
              Pid = spawn(fun() -> stored(X) end),
-             io:format("new ~p~n",[USER]),
+             io:format("[INFO] start user:~p~n",[USER]),
              register( USER, Pid );
            false -> USER ! { check, Time }
          end,
-         io:format("user refresh:~p~n", [X])
+         io:format("[INFO] user refresh:~p~n", [X])
       end,
       watch_db:list_user()
   ),
@@ -175,21 +179,20 @@ stored(NAME) ->
     { check, Time } -> 
         UserMsec = watch_db:get_last("user#"++NAME),
         UserInterval = watch_user:getinterval(NAME),
-        io:format( "user~pcheck~p:~p:~p~n",[NAME, UserMsec, UserInterval, Time]),
      
         case UserMsec + UserInterval * 1000 < Time of
             true ->
            
                 case watch_notify:getstat( NAME ) of 
-                    [ "off" ] -> io:format("user ~p off~n",[NAME]),false;
+                    [ "off" ] -> io:format("[INFO] user ~p off~n",[NAME]),false;
                      _ -> 
                            ItemList = watch_relate:list4user_itemnameonly(NAME),
                            AlarmList = lists:filter(
-                                          fun(X) ->
-                                             TmpTime = watch_db:get_last("item#"++X),
-                                             (UserMsec< TmpTime) and ( TmpTime<Time)
-                                          end, 
-                                       ItemList ),
+                               fun(X) ->
+                                   TmpTime = watch_db:get_last("item#"++X),
+                                   (UserMsec< TmpTime) and ( TmpTime<Time)
+                               end, 
+                           ItemList ),
                 
                           case length(AlarmList) > 0 of
                               true -> watch_notify:notify( NAME,AlarmList ),
