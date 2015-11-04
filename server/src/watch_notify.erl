@@ -38,6 +38,7 @@ notify( User, AlarmList ) ->
     inets:start(),
     ssl:start(),
     [UserInfo] = watch_user:getinfo(User),
+    Method = watch_method:getmethod( User ),
     Token = watch_token:add(User),
     case watch_detail:getstat( User ) of
         [ "on" ] -> 
@@ -50,7 +51,7 @@ notify( User, AlarmList ) ->
                         true ->
                             ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
                             Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all")], "@@@" ),
-                            send( User, Token, UserInfo, Info, "1" );
+                            send( User, Token, UserInfo, Info, Method, "1" );
                         false -> false
                     end
                 end,
@@ -60,16 +61,22 @@ notify( User, AlarmList ) ->
                 fun(X) -> 
                     PubIndex = watch_item:getindex(X),
                     PriIndex = watch_user:getindex(User,X),
-                    X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( PubIndex - PriIndex ) 
+                    Count = PubIndex - PriIndex,
+                    { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count }
                 end, 
             AlarmList),
-            Info = string:join( AlarmList2, "@@@" ),
-            send( User, Token, UserInfo, Info, "0" )
+            AlarmList3 = lists:map( fun(X) -> {N,_} = X, N end,lists:filter( fun(X) -> {_,C} = X, C > 0 end, AlarmList2 )),
+            case length( AlarmList3 ) > 0 of
+                true -> 
+                    Info = string:join( AlarmList3, "@@@" ),
+                    send( User, Token, UserInfo, Info, Method, "0" );
+                false -> false
+            end
     end.
 
-send( User, Token, UserInfo, Info, Detail ) ->
+send( User, Token, UserInfo, Info, Method, Detail ) ->
     MesgNotify = lists:concat(
-        ["user=" ,User ,"&token=",Token,"&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
+        ["user=" ,User ,"&method=",Method,"&token=",Token,"&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
     ),
     io:format("notify:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",

@@ -17,6 +17,7 @@
 -record(detail3,{name,stat}). 
 -record(admin,{name,stat}). 
 -record(broken,{name,stat}). 
+-record(method,{user,value}). 
 
 start() ->
     mnesia:start(),
@@ -43,6 +44,8 @@ init() ->
     mnesia:create_table(detail3,[{attributes,record_info(fields,detail3)},{disc_copies, NodeList} ]),
     mnesia:create_table(admin,[{attributes,record_info(fields,admin)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(broken,[{attributes,record_info(fields,broken)},{disc_copies, NodeList} ]),
+
+    mnesia:create_table(method,[{attributes,record_info(fields,method)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -306,3 +309,19 @@ del_broken(Name) ->
 
 list_broken() ->
     lists:map( fun(X) -> {N} = X, N end, do(qlc:q([{X#broken.name} || X <- mnesia:table(broken)]) )).
+
+%% method ========================================================
+get_method(User) ->
+    do(qlc:q([ X#method.value || X <- mnesia:table(method), X#method.user == User ])).
+
+add_method(User,Value) ->
+    Row = #method{user = User,value = Value},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+del_method(User) ->
+    F = fun() -> mnesia:delete({method,User}) end,
+    mnesia:transaction(F).
+
+list_method() ->
+    do(qlc:q([{X#method.user,X#method.value} || X <- mnesia:table(method)])).

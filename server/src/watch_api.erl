@@ -71,6 +71,10 @@ api(List) ->
     ["broken","del",USER] -> watch_broken:delbroken(USER),  ["ok"];
     ["broken","list"] -> watch_broken:listbroken();
 
+    ["method","add",USER,METHOD] -> watch_method:addmethod(USER,METHOD),  ["ok"];
+    ["method","del",USER] -> watch_method:delmethod(USER),  ["ok"];
+    ["method","get",USER] -> [ watch_method:getmethod(USER) ];
+    ["method","list"] -> watch_method:listmethod();
 
     _ -> [ "undefined"] 
   end.
