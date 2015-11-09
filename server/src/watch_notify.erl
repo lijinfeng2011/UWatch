@@ -49,7 +49,7 @@ notify( User, AlarmList ) ->
                         true ->
                             ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
                             Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all")], "@@@" ),
-                            send( User, Token, UserInfo, Info, Method, "1" );
+                            send( User, Token, UserInfo, Info, Method, "1", watch_notify_level:get_s(X) );
                         false -> false
                     end
                 end,
@@ -63,13 +63,14 @@ notify( User, AlarmList ) ->
                     { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count }
                 end, 
             AlarmList),
-            AlarmList3 = lists:map( 
-                fun(X) -> {N,_} = X, N end,lists:filter( fun(X) -> {_,C} = X, C > 0 end,
-            AlarmList2 )),
+
+            NotifyItem = lists:filter( fun(X) -> {_,C} = X, C > 0 end, AlarmList2 ),
+            AlarmList3 = lists:map( fun(X) -> {N,_} = X, N end, NotifyItem),
             case length( AlarmList3 ) > 0 of
                 true -> 
                     Info = string:join( AlarmList3, "@@@" ),
-                    send( User, Token, UserInfo, Info, Method, "0" );
+                    MaxLevel =  watch_notify_level:get_max_s( NotifyItem ),
+                    send( User, Token, UserInfo, Info, Method, "0", MaxLevel );
                 false -> false
             end
     end.
@@ -83,13 +84,13 @@ notify( User ) ->
         [ "on" ] -> Stat = "1";
         _ -> Stat = "0"
     end,
-    send( User, Token, UserInfo, "uwatch test 测试", Method, Stat ).
+    send( User, Token, UserInfo, "uwatch test 测试", Method, Stat, "2" ).
 
-send( User, Token, UserInfo, Info, Method, Detail ) ->
+send( User, Token, UserInfo, Info, Method, Detail, Level ) ->
     inets:start(),
     ssl:start(),
     MesgNotify = lists:concat(
-        ["user=" ,User ,"&method=",Method,"&token=",Token,
+        ["user=" ,User ,"&method=",Method,"&token=",Token, "&level=",Level,
          "&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
     ),
     io:format("[INFO] notify send:~p~n", [MesgNotify]),

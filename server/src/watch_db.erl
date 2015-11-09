@@ -18,11 +18,12 @@
 -record(admin,{name,stat}). 
 -record(broken,{name,stat}). 
 -record(method,{user,value}). 
+-record(notify_level,{item,level}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken]
+        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken,notify_level]
     ,20000).
 
 init() ->
@@ -46,6 +47,7 @@ init() ->
     mnesia:create_table(broken,[{attributes,record_info(fields,broken)},{disc_copies, NodeList} ]),
 
     mnesia:create_table(method,[{attributes,record_info(fields,method)},{disc_copies, NodeList} ]),
+    mnesia:create_table(notify_level,[{attributes,record_info(fields,notify_level)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -325,3 +327,19 @@ del_method(User) ->
 
 list_method() ->
     do(qlc:q([{X#method.user,X#method.value} || X <- mnesia:table(method)])).
+
+%% notify_level ========================================================
+get_notify_level(Item) ->
+    do(qlc:q([ X#notify_level.level || X <- mnesia:table(notify_level), X#notify_level.item == Item ])).
+
+set_notify_level(Item,Level) ->
+    Row = #notify_level{item = Item,level = Level},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+del_notify_level(Item) ->
+    F = fun() -> mnesia:delete({notify_level,Item}) end,
+    mnesia:transaction(F).
+
+list_notify_level() ->
+    do(qlc:q([{X#notify_level.item,X#notify_level.level} || X <- mnesia:table(notify_level)])).

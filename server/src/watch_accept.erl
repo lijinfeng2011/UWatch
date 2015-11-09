@@ -40,6 +40,7 @@ handle_client(Socket) ->
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
     {ok, Data} ->
+         io:format( "[API] ~p~n", [ Data ] ),
          [_,DATA|_] = string:tokens( Data, " " ),
          gen_tcp:send( Socket, watch_api:call( string:tokens( DATA, "/" ) )),
          gen_tcp:close( Socket );

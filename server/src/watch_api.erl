@@ -77,5 +77,10 @@ api(List) ->
     ["method","get",USER] -> [ watch_method:getmethod(USER) ];
     ["method","list"] -> watch_method:listmethod();
 
+    ["notifylevel","set",ITEM,LEVEL] -> watch_notify_level:set_s(ITEM,LEVEL),  ["ok"];
+    ["notifylevel","get",ITEM] -> [ watch_notify_level:get_s(ITEM) ];
+    ["notifylevel","del",ITEM] -> watch_notify_level:del(ITEM), ["ok"];
+    ["notifylevel","list"] -> watch_notify_level:list();
+
     _ -> [ "undefined"] 
   end.
