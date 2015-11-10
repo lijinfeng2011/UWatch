@@ -60,16 +60,20 @@ notify( User, AlarmList ) ->
                     PubIndex = watch_item:getindex(X),
                     PriIndex = watch_user:getindex(User,X),
                     Count = PubIndex - PriIndex,
-                    { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count }
+                    { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count , X }
                 end, 
             AlarmList),
 
-            NotifyItem = lists:filter( fun(X) -> {_,C} = X, C > 0 end, AlarmList2 ),
-            AlarmList3 = lists:map( fun(X) -> {N,_} = X, N end, NotifyItem),
+            NotifyItem = lists:filter( fun(X) -> {_,C,_} = X, C > 0 end, AlarmList2 ),
+            
+            NotifyItem2 = lists:map( fun(X) -> {_,_,I} = X, I end, NotifyItem),
+            AlarmList3 = lists:map( fun(X) -> {N,_,_} = X, N end, NotifyItem),
             case length( AlarmList3 ) > 0 of
                 true -> 
                     Info = string:join( AlarmList3, "@@@" ),
-                    MaxLevel =  watch_notify_level:get_max_s( NotifyItem ),
+                    MaxLevel =  watch_notify_level:get_max_s( NotifyItem2 ),
+                    io:format( "NotifLevel:~p~n", [ NotifyItem2 ] ),
+                    io:format( "NotifLevel:~p~n", [ MaxLevel ] ),
                     send( User, Token, UserInfo, Info, Method, "0", MaxLevel );
                 false -> false
             end
