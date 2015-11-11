@@ -29,4 +29,15 @@ sub check
     return ( $admin->is_success && $admin->content eq $usr ) ? 1 : 0;
 }
 
+sub check_md5
+{
+    my ( $usr, $pwd ) = @_;
+    $tt{$usr} ||= 0;
+    return 0 if $tt{$usr} + 3 > time;
+    my $re = $ua->get( 
+        sprintf ( "%s/user/auth/%s/%s", $server, $usr, $pwd )
+    );
+    return ( $re->is_success && $re->content eq 'ok' ) ? 1 : 0;
+}
+
 1;

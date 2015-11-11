@@ -13,7 +13,7 @@ our $VERSION = '0.1';
 
 hook 'before' => sub { 
     redirect '/admin/login'
-        if request->path_info ne '/admin/login' && ! session('admin');
+        if request->path_info !~ /^\/admin\/login/ && ! session('admin');
 };
 
 get '/' => sub { redirect '/admin/index'; };
@@ -26,6 +26,18 @@ any ['get', 'post'] =>  '/admin/login' => sub {
         session 'user' => $usr;
         session 'admin' => $usr;
         redirect '/admin/index';
+    }
+    template 'admin/login.tt';
+};
+
+any ['get', 'post'] =>  '/admin/login-md5' => sub {
+    my %param = %{request->params};
+    my ( $usr, $pwd ) = @param{ qw( lusr lpwd ) };
+    if( $usr && $pwd &&  Admin::Auth::check_md5( $usr, $pwd ) )
+    {  
+        session 'user' => $usr;
+        session 'mobile_user' => $usr;
+        redirect '/';
     }
     template 'admin/login.tt';
 };
