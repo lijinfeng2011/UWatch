@@ -21,11 +21,11 @@
                 content = content + '</li>';
             });
 
-            if ( count > 0 ) {
+           // if ( count > 0 ) {
                 $mesgList.find('li').removeClass('gary').addClass('gary');
                 var number = parseInt($('.listHeader').find('.count').text()) + count;
                 $('.listHeader').find('.count').text(number);
-            }
+           // }
            
             $mesgList.prepend(content).listview('refresh');
             myScroll.refresh();
@@ -85,7 +85,7 @@
                 }
             },
             onScrollMove: function () {
-                if (this.y > 5 && !pullDownEl.className.match('flip')) {
+                if (this.y > 5 && !pullDownEl.className.match('flip') && !$('#cancelBtn').attr('disabled')) {
                     pullDownEl.className = 'flip';
                     pullDownEl.querySelector('.pullDownLabel').innerHTML = '松手开始更新...';
                     this.minScrollY = 0;
@@ -110,7 +110,15 @@
 
                     var ajaxOpt = {
                         url: '/ajaxGetMessage?type=new&id=' + $('.hermesName').text(),
-                        callback: pullDownAction };
+                        before: function(){},
+                        success: pullDownAction,
+                        complete: function(){},
+                        error: function(){}
+                    };
+
+                    //var ajaxOpt = {
+                    //    url: '/ajaxGetMessage?type=new&id=' + $('.hermesName').text(),
+                    //    callback: pullDownAction };
 
                     unbindSwipeEvent( $('#contentList1 li') );
                     sendAjaxRequest( ajaxOpt );
@@ -119,9 +127,16 @@
                     pullUpEl.querySelector('.pullUpLabel').innerHTML = '加载中...';
                     
                     var last = $("#contentList1>li:last").find('.index').text();
+                  //  var ajaxOpt = {
+                  //      url: '/ajaxGetMessage?type=old&id='+$('.hermesName').text()+'&pos='+last,
+                  //      callback: pullUpAction };
                     var ajaxOpt = {
                         url: '/ajaxGetMessage?type=old&id='+$('.hermesName').text()+'&pos='+last,
-                        callback: pullUpAction };
+                        before: function(){},
+                        success: pullUpAction,
+                        complete: function(){},
+                        error: function(){}
+                    };
 
                     sendAjaxRequest( ajaxOpt );
                 }
@@ -157,7 +172,10 @@
                 var name = $('.hermesName').text(); 
                 var ajaxOpt = {
                     url: '/ajaxSetFilterMessage?name=' + name + '&node=' + node,
-                    callback: updateFilter };
+                    before: function(){},
+                    complete: function(){},
+                    error: function(){},
+                    success: updateFilter };
 
                 sendAjaxRequest( ajaxOpt );
             }
@@ -172,17 +190,28 @@
         $filterRow = null;    
     }
 
-    function sendAjaxRequest( Opt ) {
-        $.ajax({
-            async:       true,
-            timeout:     3000,
-            type:        'post',  
-            url :        Opt['url'],
-            dataType:    'json',
-            contentType: 'application/json',
-            beforeSend:  function() {},
-            success:     function(data) { Opt['callback'](data); },
-            complete:    function(){},
-            error:       function(XMLHttpRequest, textStatus, errorThrown){}
-        });
+    function cancelSub( hermes ) {
+        var tmp = hermes.split(/\./);
+ 
+        if ( tmp.length == 2 ) { 
+            var ajaxOpt = {
+                url: '/ajaxBookSubscribe?hermesID=' + tmp[0] + '&' + tmp[1] + '=0',
+                before: showLoader,
+                success: responseCancel,
+                complete: hideLoader,
+                error: ajax_error
+            };
+
+            sendAjaxRequest( ajaxOpt );
+        }
+    }
+
+    function responseCancel(data) {
+       if ( data.response === 1 ) { 
+           popOver('Sorry，稍后再试下嘛！'); 
+       } else if ( data.response === 0 ) { 
+           $('#contentList1').find('li').removeClass('gary').addClass('gary');
+           $('#cancelBtn').attr('disabled', 'true').text('取消成功');
+           popOver('取消订阅成功了yeah～'); 
+       } 
     }

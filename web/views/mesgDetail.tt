@@ -1,5 +1,5 @@
 <div data-role="page" id="mesgDetail">
-  <link rel="stylesheet" href="/css/mesgDetail.min.css" />
+  <link rel="stylesheet" href="/css/mesgDetail.css?v=1" />
 
   <div data-role="header" data-position="fixed" data-theme="b">
     <a href="#pageGlance" data-role="button" data-transition="flip">返回</a>
@@ -13,9 +13,19 @@
           <span class="pullDownIcon"></span><span class="pullDownLabel">下拉获取最新数据...</span>
         </div>
         
-        <div class="listHeader">	
-        <h3 >报警详情: 共<span class="count">[% count %]</span>条 </h3>
-        <h3 class="hermesName">[% hermes %]</h3>
+        <div class="listHeader">
+           <div>
+              <div class="title-left">
+                 <h3 >报警详情: 共<span class="count">[% count %]</span>条 </h3>
+              </div>
+              <div class="title-right">
+                 <button id="cancelBtn" onclick="cancelSub('[% hermes %]')"> 取消订阅 </button>
+              </div>
+              <div style='clear:both'></div>
+           </div>
+           <div style='margin-top:-1em'>
+              <h3 class="hermesName">[% hermes %]</h3>
+           </div>
         </div>
 
         <ul data-role="listview" id="contentList1" class="contentList">
@@ -33,5 +43,5 @@
 
   <script src="/javascripts/lib/iscroll.min.js"></script>
   <script src="/javascripts/lib/jquery.swipeButton-1.2.1.min.js"></script>
-  <script src="/javascripts/mesgDetail.min.js"></script>
+  <script src="/javascripts/mesgDetail.js"></script>
 </div>

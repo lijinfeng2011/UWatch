@@ -29,7 +29,6 @@
            url:       "/ajaxGetMessageGroup",
            success:   function ( data ) {
                          $('#mainList').empty(); 
-//                         $('#mainList li').remove();
 
                          if ( data.mesgGrp != null && data.mesgGrp.length > 0 ) {
                             $('.mesg-box').hide(); 
@@ -38,7 +37,7 @@
 
                             $.each (data.mesgGrp, function( n, mesg ) {
                                 if ( mesg.count == 0 ) {
-                                   oldHTML = oldHTML + '<li data-icon="false" name="' + mesg.name + '"><a href="/mesgDetail?type=old&id=' + mesg.name + '" class="message-link disable-font" data-transition="flip">' + mesg.name + '</a><span class="ui-li-count disable-font">old</span></li>'; 
+                                   oldHTML = oldHTML + '<li data-icon="false" name="' + mesg.name + '"><a href="/mesgDetail?type=old&id=' + mesg.name + '" class="message-link disable-font" data-transition="flip">' + mesg.name + '</a></li>'; 
                                 } else {
                                    newHTML = newHTML + '<li data-icon="false" name="' + mesg.name + '"><a href="/mesgDetail?type=new&id=' + mesg.name + '" class="message-link" data-transition="flip">' + mesg.name + '</a><span class="ui-li-count">' + mesg.count  + '</span></li>'; 
                                 }
@@ -47,7 +46,6 @@
                             if ( oldHTML.length ) contentHTML = contentHTML + oldHTML;
                             if ( contentHTML.length )  $mainlist.append( contentHTML ); 
                             $mainlist.listview('refresh');
-                           // $mainlist.trigger('create').listview('refresh');
 
                            $(".message-link").unbind('click').bind( 'click', getMessageDetail );
                          } else {

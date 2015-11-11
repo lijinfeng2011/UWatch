@@ -10,6 +10,7 @@ use Digest::MD5;
 
 use File::Basename;
 use Alarm;
+use URI::Escape;
 
 our $VERSION = '0.1';
 
@@ -95,16 +96,21 @@ get '/subscribe' => sub {
     return template 'subscribe.tt', { user => session('mobile_user'), error => 1 } unless $response;
 
     my $groupMap = { name => [] }; my $countMap = {};
-        
+ 
     map {
         my $group = $_; 
         push @{$groupMap->{name}}, $group;
         $groupMap->{$group} = [] unless exists $groupMap->{$group};
-        map { push @{$groupMap->{$group}}, $_ } sort keys %{$response->{$group}};
+        map {
+            push @{$groupMap->{$group}}, 
+                { name => $_, 
+                  alias => Encode::decode_utf8(uri_unescape($response->{$group}->{$_}))
+                };
+        } sort keys %{$response->{$group}};
 
         $countMap->{$_} = scalar keys %{$response->{$group}};
     } @{$response->{name}};
-    
+
     template 'subscribe.tt', { user => session('mobile_user'), groupMap => $groupMap, countMap => $countMap };
 };
 
@@ -120,10 +126,9 @@ get '/mesgDetail' => sub {
 };
 
 get '/profile' => sub {
-    my $users = Alarm::GetAllUsers(); my @followUsers = ();
-    my $follower = Alarm::GetFollowUsers( session('mobile_user') );
-    my $stopAlarm = Alarm::GetNotifyInfo( session('mobile_user'), 'Alarm' );
-    my $fullFormat = Alarm::GetNotifyInfo( session('mobile_user'), 'Format' );
+    my $users      = Alarm::GetAllUsers(); my @followUsers = ();
+    my $follower   = Alarm::GetFollowUsers( session('mobile_user') );
+    my $notifyInfo = Alarm::GetNotifyInfo( session('mobile_user') );
 
     map {
         my $user = $_; 
@@ -135,15 +140,22 @@ get '/profile' => sub {
     my %options = ( user => session('mobile_user'), followUsers => \@followUsers );
 
     if ( scalar @$profileItems == 4 ) {
-        $options{phone} = $profileItems->[0];
-        $options{address} = $profileItems->[1];
-        $options{oncaller} = $profileItems->[2];
-        $options{refTime} = $profileItems->[3];
+        $options{phone}    = $profileItems->[0];
+        $options{address}  = $profileItems->[1];
+        $options{oncaller} = Encode::decode_utf8(uri_unescape($profileItems->[2]));
+        $options{refTime}  = $profileItems->[3];
     }
 
-    $options{stopAlarm} = $stopAlarm eq 'off' ? 1 : 0;
+    $options{stopAlarm}  = $notifyInfo->{stopAlarm} eq 'off' ? 1 : 0;
+    $options{fullFormat} = $notifyInfo->{fullFormat} eq 'on' ? 1 : 0;
 
-    $options{fullFormat} = $fullFormat eq 'on' ? 1 : 0;
+    $options{method}  = '';
+    $options{account} = '';
+
+    if ( $notifyInfo->{repMethod} =~ m/^(.+)-(.+)$/ ){
+        $options{method} = $1;
+        $options{account} = $2;    
+    }
 
     template 'profile.tt', \%options;
 };
@@ -224,6 +236,22 @@ any ['get', 'post'] => '/ajaxSetFormat' => sub {
 
     my %param = %{request->params};
     my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Format', $param{value} );
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxSetMethod' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Method', $param{value} );
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxTriggerTest' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::TriggerNotifyTest(session('mobile_user'));
     to_json({ response => $response });
 };
 

@@ -1,11 +1,20 @@
 var $page = null;
 
-$(document).on('mobileinit', function() {
-    $.mobile.defaultPageTransition = 'none';
-    $.mobile.buttonMarkup.hoverDelay = 10;
-//    $.support.cors = true;
-//    $.mobile.allowCrossDomainPages = true;
-    $('.ui-body-c, .ui-overlay-c').css('background', $(".contentc", $.mobile.activePage).css('background'));
+$(document).on('pageinit', function() {
+    if ( $('#go-top').length ) {
+        $('#go-top').hide();
+        return;
+    }
+
+    ( new GoTop() ).init({
+        pageWidth: $(window).width(),
+        nodeId: 'go-top',
+        nodeWidth: 50,
+        distanceToBottom: 125,
+        hideRegionHeight: 130,
+        distanceToPage: 20,
+        zIndex: 100,
+        text: ' '});
 });
     
 $(document).on('pagebeforeshow', function() {
@@ -91,3 +100,54 @@ var urlLoadContent = function(url) {
 
     return content;
 };
+
+function showLoader() {
+    $.mobile.loading('show', {
+        textVisible: true,
+        dataType: "json",
+        theme: 'a',
+        textonly: false,
+        html: ""
+    });
+}
+
+function hideLoader() { $.mobile.loading('hide'); }
+
+function popOver(content, callback) {
+    $('<div data-role="popup" id="popupDialog" data-confirmed="yes" data-transition="pop" data-overlay-theme="a" data-theme="a" style="width:18em"><div data-role="header" data-theme="b"><h1>亲!</h1></div><div role="main" class="ui-content"><h3 class="ui-title">' + content + '</h3></div></div>').appendTo($.mobile.pageContainer);
+
+    var $popupObj = $('#popupDialog');
+    $popupObj.trigger('create');
+    $popupObj.popup({  
+        history: false,
+        afterclose: function (event, ui) {  
+            $popupObj.find(".optionConfirm").first().off('click');  
+            var isConfirmed = $popupObj.attr('data-confirmed') === 'yes' ? true : false;  
+            $(event.target).remove();  
+            if (isConfirmed && callback) { callback(); }  
+        } });
+    $popupObj.popup('open');
+    setTimeout(function(){$popupObj.popup('close');}, 1200);
+}
+
+function sendAjaxRequest( Opt ) {
+    $.ajax({
+        async:       true,
+        timeout:     3000,
+        type:        'post',  
+        url :        Opt['url'],
+        dataType:    'json',
+        contentType: 'application/json',
+        beforeSend:  function()     { Opt['before']();      },
+        success:     function(data) { Opt['success'](data); },
+        complete:    function()     { Opt['complete']();    },  
+        error:       function(XMLHttpRequest, textStatus, errorThrown){ alert(textStatus); Opt['error'](); }
+    });
+}
+
+function ajax_success(data) {
+    if ( data.response === 1 ) { popOver('Sorry，稍后再试下嘛！'); } 
+    if ( data.response === 0 ) { popOver('恭喜！成功了yeah～'); } 
+}
+
+function ajax_error() { popOver('链路失败，稍后再试下嘛！'); }

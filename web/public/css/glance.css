@@ -8,5 +8,15 @@
    color: #999 !important;
 }
 
+a#go-top {
+   width: 49px;
+   height: 35px;
+   text-decoration: none;
+   opacity: 0.9;
+   background:url(/images/sprite.png) no-repeat 0 -424px;
+}
 
+a#go-top:hover {
+   background-position:-49px -424px;   
+}
 

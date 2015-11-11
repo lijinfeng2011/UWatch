@@ -6,9 +6,11 @@
     <link rel="stylesheet" href="/css/jquery.swipeButton.css" />
     <meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1.0, initial-scale=1.0,">
     <script src="/javascripts/lib/jquery.min.js"></script>
+    <script src="/javascripts/init.js"></script>
     <script src="/javascripts/lib/jquery.mobile-1.4.3.min.js"></script>
     <script src="/javascripts/lib/jquery.md5.min.js"></script>
 
+    <script src="/javascripts/lib/goTop.js"></script>
     <script src="/javascripts/global.js"></script>
     <script src="/javascripts/glance.js"></script>
 </head>
@@ -36,7 +38,7 @@
     <div style="margin: 10px">
        <div class="mesg-box" style="display:none"></div>
 
-       <ul id="mainList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索" data-split-theme="a">
+       <ul id="mainList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索">
      [% FOREACH msgGroup IN mesgGroup %]
            <li name="[% msgGroup.name %]" data-icon="false">
                <a href="/mesgDetail?type=new&id=[% msgGroup.name %]" class='message-link' data-transition="flip">[% msgGroup.name %]</a>
