@@ -19,11 +19,12 @@
 -record(broken,{name,stat}). 
 -record(method,{user,value}). 
 -record(notify_level,{item,level}). 
+-record(remark,{item,aname}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken,notify_level]
+        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark]
     ,20000).
 
 init() ->
@@ -48,6 +49,7 @@ init() ->
 
     mnesia:create_table(method,[{attributes,record_info(fields,method)},{disc_copies, NodeList} ]),
     mnesia:create_table(notify_level,[{attributes,record_info(fields,notify_level)},{disc_copies, NodeList} ]),
+    mnesia:create_table(remark,[{attributes,record_info(fields,remark)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -343,3 +345,20 @@ del_notify_level(Item) ->
 
 list_notify_level() ->
     do(qlc:q([{X#notify_level.item,X#notify_level.level} || X <- mnesia:table(notify_level)])).
+
+%% alias ========================================================
+add_alias(Item,Aname) ->
+    Row = #remark{item = Item,aname = Aname},
+    F = fun() -> mnesia:write(Row) end,
+    mnesia:transaction(F).
+
+del_alias(Item) ->
+    F = fun() -> mnesia:delete({remark,Item}) end,
+    mnesia:transaction(F).
+
+get_alias(Item) ->
+    do(qlc:q([ X#remark.aname || X <- mnesia:table(remark), X#remark.item == Item ])).
+
+list_alias() ->
+    do(qlc:q([{X#remark.item,X#remark.aname} || X <- mnesia:table(remark)])).
+

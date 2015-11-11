@@ -82,5 +82,10 @@ api(List) ->
     ["notifylevel","del",ITEM] -> watch_notify_level:del(ITEM), ["ok"];
     ["notifylevel","list"] -> watch_notify_level:list();
 
+    ["alias","add",ITEM,ANAME] -> watch_alias:addalias(ITEM,ANAME), ["ok"];
+    ["alias","del",ITEM] -> watch_alias:delalias(ITEM), ["ok"];
+    ["alias","get",ITEM] -> [ watch_alias:getalias(ITEM) ];
+    ["alias","list"] -> watch_alias:listalias();
+
     _ -> [ "undefined"] 
   end.
