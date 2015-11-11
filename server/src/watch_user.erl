@@ -1,5 +1,5 @@
 -module(watch_user).
--export([start/0,add/2,del/1,list/0,list_info/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3,changepwd/2,list_table/0]).
+-export([start/0,add/2,del/1,list/0,list_info/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3,changepwd/2,list_table/0,setindex4notify/3,getindex4notify/2,mesg/6]).
 
 -define(INTERVAL, 60).
 -define(DEFAULT_MAX_MESG, 10000).
@@ -49,6 +49,9 @@ changepwd(User, NewPwd) ->
 setindex( User, Item, Index ) -> watch_db:set_userindex( User ++ "##" ++ Item, Index ).
 getindex( User, Item )        -> watch_db:get_userindex( User ++ "##" ++ Item ).
 
+setindex4notify( User, Item, Index ) -> watch_db:set_userindex4notify( User ++ "##" ++ Item, Index ).
+getindex4notify( User, Item )        -> watch_db:get_userindex4notify( User ++ "##" ++ Item ).
+
 setinfo( User, Info )  -> watch_db:set_user_info( User, Info ).
 getinfo( User )        -> 
   case watch_db:get_user_info( User ) of
@@ -87,8 +90,14 @@ mesg( User, Item ) ->
     end,
   watch_item:disk_log( Item, "mesg" )).
 
-mesg( User, Item, From, Type, Limit ) ->
-  UserId = getindex( User,Item ),
+mesg( User, Item, From, Type, Limit ) -> mesg( User, Item, From, Type, Limit, "_" ).
+
+mesg( User, Item, From, Type, Limit, IndexType ) ->
+  case IndexType of
+    "notify" ->  UserId = getindex4notify( User,Item );
+    _ -> UserId = getindex( User,Item )
+  end,
+
   case From of
     "curr" -> FromId = UserId;
     _ -> FromId = list_to_integer(From)
@@ -116,7 +125,11 @@ mesg( User, Item, From, Type, Limit ) ->
              _ -> NewId = 0
          end,
          case NewId > UserId of
-           true -> setindex( User,Item, NewId );
+           true ->
+                case IndexType of
+                    "notify" -> setindex4notify( User,Item, NewId );
+                     _ -> setindex( User,Item, NewId )
+                end;
            false -> false
          end,
          OutMesg

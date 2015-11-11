@@ -8,6 +8,7 @@
 -record(relate,{item,user}).
 -record(follow,{owner,follower}).
 -record(userindex,{name,index}).
+-record(userindex4notify,{name,index}).
 -record(stat,{name,stat}). %% item 的状态 1/1/_
 -record(last,{name,time}). %% item 最后出现错误的时间 和user最后处理的错误时间
 -record(alarm,{name,seed,main}). 
@@ -24,7 +25,7 @@
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark]
+        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark]
     ,20000).
 
 init() ->
@@ -37,6 +38,7 @@ init() ->
     mnesia:create_table(relate,[{attributes,record_info(fields,relate)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(follow,[{attributes,record_info(fields,follow)},{disc_copies, NodeList},{type,bag} ]),
     mnesia:create_table(userindex,[{attributes,record_info(fields,userindex)},{disc_copies, NodeList} ]),
+    mnesia:create_table(userindex4notify,[{attributes,record_info(fields,userindex4notify)},{disc_copies, NodeList} ]),
     mnesia:create_table(stat,[{attributes,record_info(fields,stat)},{disc_copies, NodeList} ]),
     mnesia:create_table(last,[{attributes,record_info(fields,last)},{disc_copies, NodeList} ]),
     mnesia:create_table(alarm,[{attributes,record_info(fields,alarm)},{disc_copies, NodeList} ]),
@@ -187,6 +189,18 @@ get_userindex(Name) ->
 
 set_userindex(Name,Index) ->
     F = fun() -> mnesia:write( #userindex{name = Name,index = Index} ) end,
+    mnesia:transaction(F).
+
+%% userindex4notify ===================================================
+get_userindex4notify(Name) ->
+    List = do(qlc:q([X || X <- mnesia:table(userindex4notify), X#userindex4notify.name == Name ])),
+    case length(List) == 1 of
+      true -> [{_,_,I}] = List, I;
+      false -> 0
+    end.
+
+set_userindex4notify(Name,Index) ->
+    F = fun() -> mnesia:write( #userindex4notify{name = Name,index = Index} ) end,
     mnesia:transaction(F).
 
 %% stat ========================================================

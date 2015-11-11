@@ -43,12 +43,12 @@ notify( User, AlarmList ) ->
             lists:map(
                 fun(X) ->
                     PubIndex = watch_item:getindex(X),
-                    PriIndex = watch_user:getindex(User,X),
+                    PriIndex = watch_user:getindex4notify(User,X),
                     COUNT = PubIndex - PriIndex,
                     case COUNT > 0 of
                         true ->
                             ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
-                            Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all")], "@@@" ),
+                            Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all","notify")], "@@@" ),
                             send( User, Token, UserInfo, Info, Method, "1", watch_notify_level:get_s(X) );
                         false -> false
                     end
@@ -58,7 +58,8 @@ notify( User, AlarmList ) ->
             AlarmList2 = lists:map( 
                 fun(X) -> 
                     PubIndex = watch_item:getindex(X),
-                    PriIndex = watch_user:getindex(User,X),
+                    PriIndex = watch_user:getindex4notify(User,X),
+                    watch_user:setindex4notify(User,X,PubIndex),
                     Count = PubIndex - PriIndex,
                     { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count , X }
                 end, 
