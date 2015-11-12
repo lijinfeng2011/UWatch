@@ -1,7 +1,12 @@
 -module(watch_api).
 -export([call/1]).
 
-call(List) -> string:join(api(List),"\n").
+call(List) -> 
+    L = api(List),
+    case length(L) > 0 of
+        true -> string:join(L,"\n");
+        false -> ""
+    end.    
 
 api(List) ->
   case List of

@@ -110,31 +110,35 @@ mesg( User, Item, From, Type, Limit, IndexType ) ->
 
   Mesg = watch_item:disk_log( Item, "mesg" ),
 
-  M = lists:reverse(Mesg),
-  case Type of
-    "tail" -> mesg_grep(tail,M,FromId,LIMIT);
-    _ -> OutMesg = mesg_grep(head,M,FromId,LIMIT), 
-
-         [ New|_] = M,
-         case re:split(New,"[*]",[{return,list}]) of
-             [[],Index|_] ->
-                 case catch list_to_integer(Index) of
-                     {'EXIT',_} -> NewId = 0;
-                     I -> NewId = I
-                 end;
-             _ -> NewId = 0
-         end,
-         case NewId > UserId of
-           true ->
-                case IndexType of
-                    "notify" -> setindex4notify( User,Item, NewId );
-                     _ -> setindex( User,Item, NewId )
-                end;
-           false -> false
-         end,
-         OutMesg
+  case length(Mesg) > 0 of
+      true ->
+          M = lists:reverse(Mesg),
+          case Type of
+            "tail" -> mesg_grep(tail,M,FromId,LIMIT);
+            _ -> OutMesg = mesg_grep(head,M,FromId,LIMIT), 
+        
+                 [ New|_] = M,
+                 case re:split(New,"[*]",[{return,list}]) of
+                     [[],Index|_] ->
+                         case catch list_to_integer(Index) of
+                             {'EXIT',_} -> NewId = 0;
+                             I -> NewId = I
+                         end;
+                     _ -> NewId = 0
+                 end,
+                 case NewId > UserId of
+                   true ->
+                        case IndexType of
+                            "notify" -> setindex4notify( User,Item, NewId );
+                             _ -> setindex( User,Item, NewId )
+                        end;
+                   false -> false
+                 end,
+                 OutMesg
+          end;
+      false -> []
   end.
-  
+ 
 mesg_grep(Type,Mesg,FromId,Limit) -> mesg_grep(Type,Mesg,FromId,Limit,[]).
 mesg_grep(Type,Mesg,FromId,Limit,Out) ->
   case length(Out) >= Limit of
