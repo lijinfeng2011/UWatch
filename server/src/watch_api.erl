@@ -92,5 +92,18 @@ api(List) ->
     ["alias","get",ITEM] -> [ watch_alias:getalias(ITEM) ];
     ["alias","list"] -> watch_alias:listalias();
 
+    ["cronos","add",NAME] -> watch_cronos:add(NAME), ["ok"];
+    ["cronos","set","start",NAME,START] -> watch_cronos:setstart( NAME,START), ["ok"];
+    ["cronos","set","keep",NAME,KEEP] -> watch_cronos:setkeep( NAME,KEEP), ["ok"];
+    ["cronos","set","u1",NAME,U1] -> watch_cronos:setu1( NAME,U1), ["ok"];
+    ["cronos","set","u2",NAME,U2] -> watch_cronos:setu2( NAME,U2), ["ok"];
+    ["cronos","set","u3",NAME,U3] -> watch_cronos:setu3( NAME,U3), ["ok"];
+    ["cronos","set","u4",NAME,U4] -> watch_cronos:setu4( NAME,U4), ["ok"];
+    ["cronos","set","u5",NAME,U5] -> watch_cronos:setu5( NAME,U5), ["ok"];
+    ["cronos","get","cal",NAME] -> watch_cronos:getcal(NAME);
+    ["cronos","get","now",NAME] -> watch_cronos:getnow(NAME);
+    ["cronos","list"] -> watch_cronos:list();
+    ["cronos","show",NAME] -> watch_cronos:show(NAME);
+
     _ -> [ "undefined"] 
   end.

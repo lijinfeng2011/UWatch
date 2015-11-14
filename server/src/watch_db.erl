@@ -21,11 +21,12 @@
 -record(method,{user,value}). 
 -record(notify_level,{item,level}). 
 -record(remark,{item,aname}). 
+-record(cronos,{name,start=0,keep=0,u1={},u2={},u3={},u4={},u5={}}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark]
+        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark,cronos]
     ,20000).
 
 init() ->
@@ -52,6 +53,7 @@ init() ->
     mnesia:create_table(method,[{attributes,record_info(fields,method)},{disc_copies, NodeList} ]),
     mnesia:create_table(notify_level,[{attributes,record_info(fields,notify_level)},{disc_copies, NodeList} ]),
     mnesia:create_table(remark,[{attributes,record_info(fields,remark)},{disc_copies, NodeList} ]),
+    mnesia:create_table(cronos,[{attributes,record_info(fields,cronos)},{disc_copies, NodeList} ]),
 
     mnesia:stop().
 
@@ -376,3 +378,108 @@ get_alias(Item) ->
 list_alias() ->
     do(qlc:q([{X#remark.item,X#remark.aname} || X <- mnesia:table(remark)])).
 
+%% cronos ========================================================
+add_cronos(Name) ->
+    F = fun() -> mnesia:write( #cronos{ name = Name} ) end,
+    mnesia:transaction(F).
+
+%del_alias(Item) ->
+%    F = fun() -> mnesia:delete({remark,Item}) end,
+%    mnesia:transaction(F).
+%
+%get_alias(Item) ->
+%    do(qlc:q([ X#remark.aname || X <- mnesia:table(remark), X#remark.item == Item ])).
+%
+
+set_cronos_start(Name,Start) ->
+    case get_cronos( Name ) of
+        [{Name,_,Keep,U1,U2,U3,U4,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = list_to_integer(Start),
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+set_cronos_keep(Name,Keep) ->
+    case get_cronos( Name ) of
+        [{Name,Start,_,U1,U2,U3,U4,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = list_to_integer(Keep), u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+
+set_cronos_u1(Name,U1) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,_,U2,U3,U4,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+set_cronos_u2(Name,U2) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,U1,_,U3,U4,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+set_cronos_u3(Name,U3) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,U1,U2,_,U4,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+  
+  
+set_cronos_u4(Name,U4) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,U1,U2,U3,_,U5}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+
+set_cronos_u5(Name,U5) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,U1,U2,U3,U4,_}|_] -> 
+                   NewRow = #cronos{ name=Name,start = Start,
+                                     keep = Keep, u1=U1,u2=U2,u3=U3,u4=U4,u5=U5},
+                   mnesia:transaction( fun() -> mnesia:write(NewRow) end) ;
+        _ -> false
+    end.
+  
+ 
+    
+list_cronos() ->
+    do(qlc:q([X#cronos.name || X <- mnesia:table(cronos)])).
+
+get_cronos( Name ) ->
+    do(qlc:q([
+        { X#cronos.name, X#cronos.start, X#cronos.keep,
+          X#cronos.u1, X#cronos.u2, X#cronos.u3, X#cronos.u4, X#cronos.u5
+        } || X <- mnesia:table(cronos), X#cronos.name == Name ])).
+show_cronos( Name ) ->
+    case get_cronos( Name ) of
+        [{Name,Start,Keep,U1,U2,U3,U4,U5}|_] ->
+
+               [ "name=" ++ Name,
+                 "start=" ++  integer_to_list( Start ),
+                 "keep=" ++  integer_to_list( Keep ) ,
+                 "u1=" ++ get_user_info_cronos( U1 ),
+                 "u2=" ++ get_user_info_cronos( U2 ),
+                 "u3=" ++ get_user_info_cronos( U3 ),
+                 "u4=" ++ get_user_info_cronos( U4 ),
+                 "u5=" ++ get_user_info_cronos( U5 )
+               ];
+        _ -> []
+    end.
+
+get_user_info_cronos( U ) ->
+    case U of
+        {C,L} -> string:join( [ integer_to_list(C)|L], ":" );
+        _ -> ""
+    end.

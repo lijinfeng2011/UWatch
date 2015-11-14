@@ -199,7 +199,6 @@ stored(NAME) ->
      
         case UserMsec + UserInterval * 1000 < Time of
             true ->
-           
                 case watch_notify:getstat( NAME ) of 
                     [ "off" ] -> io:format("[INFO] user ~p off~n",[NAME]),false;
                      _ -> 
@@ -210,15 +209,40 @@ stored(NAME) ->
                                    (UserMsec< TmpTime) and ( TmpTime<Time)
                                end, 
                            ItemList ),
+
+                           Cronos = list_to_atom( "cronos#" ++ NAME ),
+                           try
+                               Cronos ! { notify, AlarmList }
+                           catch
+                               error:badarg -> false
+                           end,
                 
-                          case length(AlarmList) > 0 of
-                              true -> watch_notify:notify( NAME,AlarmList ),
-                                      watch_db:set_last("user#"++NAME, Time);
-                              false -> false      
-                          end
+                           notify_item(AlarmList,NAME,Time)
                 end;
             false -> fase
-        end
+        end;
         
+   { notify, Item } ->
+        io:format("cronos user notify11:~p~n", [NAME]),
+        io:format("cronos user notify22:~p~n", [Item]),
+        Time = watch_misc:milliseconds(),
+        UserMsec = watch_db:get_last("user#"++NAME),
+        AlarmList = lists:filter(
+            fun(X) ->
+                TmpTime = watch_db:get_last("item#"++X),
+                (UserMsec< TmpTime) and ( TmpTime<Time)
+            end,
+        Item ),
+        io:format("cronos user notify33:~p~n", [AlarmList]),
+
+       notify_item(AlarmList,NAME,Time)
   end,
   stored(NAME).
+
+
+notify_item(List,Name,Time) ->
+    case length(List) > 0 of
+        true -> watch_notify:notify( Name,List ),
+                watch_db:set_last("user#"++Name, Time);
+        false -> io:format( "cronos notify_item:~p~n", [Name] ),false
+    end.

@@ -94,6 +94,13 @@ notify( User ) ->
 send( User, Token, UserInfo, Info, Method, Detail, Level ) ->
     inets:start(),
     ssl:start(),
+    io:format( "user=~p~n", [ User] ),
+    io:format( "method=~p~n", [ Method] ),
+    io:format( "token=~p~n", [ Token] ),
+    io:format( "level=~p~n", [ Level] ),
+    io:format( "userinfo=~p~n", [ UserInfo] ),
+    io:format( "etail=~p~n", [ Detail] ),
+    io:format( "info=~p~n", [ Info] ),
     MesgNotify = lists:concat(
         ["user=" ,User ,"&method=",Method,"&token=",Token, "&level=",Level,
          "&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]

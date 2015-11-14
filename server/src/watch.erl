@@ -12,5 +12,6 @@ start(Port) ->
   watch_filter:start(),
   watch_mesg:start(),
   watch_token:start(),
+  watch_cronos:start(),
   watch_accept:start(Port).
 
