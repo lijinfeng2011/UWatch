@@ -5,36 +5,41 @@ start() ->
   spawn( fun() -> mon() end ).
 
 add( Name ) -> watch_db:add_cronos( Name ).
+del( Name ) -> watch_db:del_cronos( Name ).
 show( Name ) -> watch_db:show_cronos( Name ).
 setstart( Name,Start ) -> watch_db:set_cronos_start( Name,Start).
 setkeep( Name,Keep ) -> watch_db:set_cronos_keep( Name,Keep).
 
 setu1( Name,U1 ) -> 
     case string:tokens( U1, ":" ) of
+        ["clear"] -> watch_db:set_cronos_u1(Name,{});
         [C|L] -> watch_db:set_cronos_u1(Name,{list_to_integer(C),L});
         _ -> false
     end.
 setu2( Name,U2 ) -> 
     case string:tokens( U2, ":" ) of
+        ["clear"] -> watch_db:set_cronos_u2(Name,{});
         [C|L] -> watch_db:set_cronos_u2(Name,{list_to_integer(C),L});
         _ -> false
     end.
 setu3( Name,U3 ) -> 
     case string:tokens( U3, ":" ) of
+        ["clear"] -> watch_db:set_cronos_u3(Name,{});
         [C|L] -> watch_db:set_cronos_u3(Name,{list_to_integer(C),L});
         _ -> false
     end.
 setu4( Name,U4 ) -> 
     case string:tokens( U4, ":" ) of
+        ["clear"] -> watch_db:set_cronos_u4(Name,{});
         [C|L] -> watch_db:set_cronos_u4(Name,{list_to_integer(C),L});
         _ -> false
     end.
 setu5( Name,U5 ) -> 
     case string:tokens( U5, ":" ) of
+        ["clear"] -> watch_db:set_cronos_u5(Name,{});
         [C|L] -> watch_db:set_cronos_u5(Name,{list_to_integer(C),L});
         _ -> false
     end.
-
 
 getcal(Name) ->
     case watch_db:get_cronos(Name) of
@@ -122,7 +127,6 @@ stored(Name,Q) ->
     end,
     timer:sleep( 5000 ),
     stored(Name,Q).
-%
 
 search_user(Name,Q) ->
     sets:to_list(sets:from_list( search_user_list(Name,Q) )).

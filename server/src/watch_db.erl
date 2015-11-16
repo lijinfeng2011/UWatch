@@ -383,13 +383,9 @@ add_cronos(Name) ->
     F = fun() -> mnesia:write( #cronos{ name = Name} ) end,
     mnesia:transaction(F).
 
-%del_alias(Item) ->
-%    F = fun() -> mnesia:delete({remark,Item}) end,
-%    mnesia:transaction(F).
-%
-%get_alias(Item) ->
-%    do(qlc:q([ X#remark.aname || X <- mnesia:table(remark), X#remark.item == Item ])).
-%
+del_cronos(Name) ->
+    F = fun() -> mnesia:delete({cronos,Name}) end,
+    mnesia:transaction(F).
 
 set_cronos_start(Name,Start) ->
     case get_cronos( Name ) of

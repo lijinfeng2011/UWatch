@@ -93,6 +93,7 @@ api(List) ->
     ["alias","list"] -> watch_alias:listalias();
 
     ["cronos","add",NAME] -> watch_cronos:add(NAME), ["ok"];
+    ["cronos","del",NAME] -> watch_cronos:del(NAME), ["ok"];
     ["cronos","set","start",NAME,START] -> watch_cronos:setstart( NAME,START), ["ok"];
     ["cronos","set","keep",NAME,KEEP] -> watch_cronos:setkeep( NAME,KEEP), ["ok"];
     ["cronos","set","u1",NAME,U1] -> watch_cronos:setu1( NAME,U1), ["ok"];
