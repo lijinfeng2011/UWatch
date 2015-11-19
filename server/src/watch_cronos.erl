@@ -2,7 +2,8 @@
 -compile(export_all).
 
 start() -> 
-  spawn( fun() -> mon() end ).
+  spawn( fun() -> mon() end ),
+  spawn( fun() -> chk() end ).
 
 add( Name ) -> watch_db:add_cronos( Name ).
 del( Name ) -> watch_db:del_cronos( Name ).
@@ -85,6 +86,12 @@ getnow(Time,Start,Keep,User,Mark) ->
         _ -> []
     end.
 
+getnow2(Time,Start,Keep,User,Mark) -> 
+    case User of
+        {_,L} -> { Mark, search_user_from_u(Start,Keep,L,Time) };
+        _ -> {}
+    end.
+
 list() -> watch_db:list_cronos().
 
 mon() ->
@@ -93,7 +100,7 @@ mon() ->
             CRONOS = list_to_atom( "cronos#"++ X ),
             case whereis( CRONOS ) =:= undefined of
                 true -> 
-                    Pid = spawn(fun() -> stored(X,queue:new()) end),
+                    Pid = spawn(fun() -> stored(X,queue:new(),[],[]) end),
                     register( CRONOS, Pid );
                 false -> false
             end
@@ -102,53 +109,121 @@ mon() ->
     timer:sleep( 5000 ),
     mon().
 
-stored(Name,Q) ->
+chk() ->
+    Time = watch_misc:seconds(),
+    lists:map( 
+        fun(X) -> 
+            CRONOS = list_to_atom( "cronos#"++ X ),
+            case whereis( CRONOS ) =:= undefined of
+                true -> true;
+                false -> 
+                  try
+                    CRONOS ! { notice, Time }
+                  catch
+                    error:badarg -> io:format( "[ERROR]cronos chk notice user ~p fail.~n", [X] )
+                  end
+            end
+        end,
+    list()),
+    timer:sleep( 120000 ),
+    mon().
+
+stored(Name,Q, AllUser, CronosList ) ->
     receive 
         { notify, List } ->
             case queue:len( Q ) > 100 of
-                true -> {_,TmpQ} = queue:out(Q), NewQ = queue:in( length(List), TmpQ);
-                false -> NewQ = queue:in( length(List), Q)
+                true -> {_,TmpQ} = queue:out(Q), NewQ = queue:in( List, TmpQ);
+                false -> NewQ = queue:in( List, Q)
             end,
-            UserList = search_user(Name,NewQ),
-            io:format("[INFO] cronos ~p: ~p~n", [Name,UserList]),
+            UserList = search_user(Name,NewQ,List),
+            io:format("[INFO] cronos L ~p: ~p~n", [Name,UserList]),
+            io:format("[INFO] cronos Q ~p: ~p~n", [Name,queue:to_list(NewQ)]),
 
             lists:map( 
                  fun(X) -> 
-
-                     UserStored = list_to_atom( "user_list#" ++X),
+                     {User,AlarmList} = X,
+                     UserStored = list_to_atom( "user_list#" ++ User ),
                      try
-                         UserStored ! { notify, List }
+                         UserStored ! { notify, AlarmList }
                      catch
                          error:badarg -> io:format( "[ERROR]cronos notify user ~p fail.~n", [X] )
                      end
                  end
-            ,UserList )
+            ,UserList ),
+            NewAllUser = AllUser, NewCronosList = CronosList;
+          
+        { notice,Time } ->
+            NewQ = Q,
+            case watch_db:get_cronos(Name) of
+                [{Name,Start,Keep,U1,U2,U3,U4,U5}|_] ->
+                   NewAllUser = lists:sort( sets:to_list(sets:from_list(
+                       lists:concat( lists:map( fun(X) -> get_user(X) end, [ U1,U2,U3,U4,U5 ] ) )
+                   ))),
+                   NewCronosList = lists:filter( fun(X) -> X /= {} end , 
+                    lists:map(
+                       fun(X) -> 
+                           {Mark,U} = X,
+                           getnow2(Time,Start,Keep,U,Mark)
+                       end,
+                    [{"u1",U1}, {"u2",U2},{"u3",U3},{"u4",U4},{"u5",U5}] )),
+                    io:format( "cronos XXXX:~p  ~p  ~p~n", [ Name, NewAllUser, NewCronosList ] ),
+
+                    case {AllUser, CronosList} =:= { NewAllUser, NewCronosList } of
+                       true -> true;
+                       false ->
+                           
+                           watch_cronos_notice:write_to_db(Name,NewAllUser,NewCronosList),
+                           CronosLevel = string:join( 
+                               lists:map( fun(X) -> {M,U} = X, M++":"++ U end, NewCronosList )
+
+                           , "@@@" ),
+                           NoticeInfo = "Cronos:" ++ Name ++ "@@@" ++ CronosLevel,
+                           lists:map( 
+                               fun(X) -> 
+                                   USER = list_to_atom( "user_list#" ++ X ),
+                                   try 
+                                       USER ! { notice, NoticeInfo },
+                                       io:format( "[INFO] notice cronos to ~p => ~p~n", [Name, USER]  )
+                                   catch
+                                       error:badarg -> io:format( "[ERROR] notice cronos to ~p => ~p fail.~n", [Name, USER] )
+                                   end
+                               end, 
+                           NewAllUser)
+                   end;
+                _ -> NewAllUser = AllUser, NewCronosList = CronosList
+            end
 
     end,
-    timer:sleep( 5000 ),
-    stored(Name,Q).
+    stored(Name,NewQ,NewAllUser, NewCronosList).
 
-search_user(Name,Q) ->
-    sets:to_list(sets:from_list( search_user_list(Name,Q) )).
-search_user_list(Name,Q) ->
-    Time = watch_misc:seconds(),
-    case watch_db:get_cronos(Name) of
-        [{Name,Start,Keep,U1,U2,U3,U4,U5}|_] ->
-            search_user_from_u(Q,Start,Keep,U1,Time) ++
-            search_user_from_u(Q,Start,Keep,U2,Time) ++
-            search_user_from_u(Q,Start,Keep,U3,Time) ++
-            search_user_from_u(Q,Start,Keep,U4,Time) ++
-            search_user_from_u(Q,Start,Keep,U5,Time);
+get_user( U ) ->
+    case U of
+        {_,L} -> L;
         _ -> []
     end.
 
 
-search_user_from_u(Q,Start,Keep,U,Time) ->
+search_user(Name,Q,AlarmList) ->
+    sets:to_list(sets:from_list( search_user_list(Name,Q,AlarmList) )).
+search_user_list(Name,Q,AlarmList) ->
+    Time = watch_misc:seconds(),
+    case watch_db:get_cronos(Name) of
+        [{Name,Start,Keep,U1,U2,U3,U4,U5}|_] ->
+            search_user_from_u(Q,Start,Keep,U1,Time,AlarmList) ++
+            search_user_from_u(Q,Start,Keep,U2,Time,AlarmList) ++
+            search_user_from_u(Q,Start,Keep,U3,Time,AlarmList) ++
+            search_user_from_u(Q,Start,Keep,U4,Time,AlarmList) ++
+            search_user_from_u(Q,Start,Keep,U5,Time,AlarmList);
+        _ -> []
+    end.
+
+search_user_from_u(Q,Start,Keep,U,Time,AlarmList) ->
     case U of
         {C,L} ->
-            case cronos_alarm(Q,C) of
+            List = cronos_alarm(Q,C,AlarmList),
+            case length(List) > 0  of
                 true -> 
-                    [ search_user_from_u(Start,Keep,L,Time) ];
+                    [ { search_user_from_u(Start,Keep,L,Time), List} ];
                 false -> []
             end;
         _ -> []
@@ -156,28 +231,31 @@ search_user_from_u(Q,Start,Keep,U,Time) ->
 
 search_user_from_u(Start,Keep,List,Time) ->
     ID = ( trunc( ( Time - Start ) div Keep) rem length(List) ) +1,
-    io:format("cronos time:~p start:~p keep:~p len:~p~n", [ integer_to_list(Time), integer_to_list(Start),integer_to_list(Keep), integer_to_list(length(List)) ]),
+    io:format( "cronos time:~p start:~p keep:~p len:~p~n",
+        [ integer_to_list(Time), integer_to_list(Start),
+          integer_to_list(Keep), integer_to_list(length(List))
+        ]),
     io:format( "cronos id:~p~n", [integer_to_list(ID)]),
     lists:nth(ID,List).
-    
 
-cronos_alarm(Q,Count) ->
-  case queue_count(Q,Count) of
-    error -> false;
-    VV -> VV * 2 > Count
-  end.
+cronos_alarm(Q,Count,AlarmList) ->
+  THS = Count / 2,
+  List = queue_out(Q,Count),
 
-queue_count(Q,Count) -> queue_count(Q,Count,0).
-queue_count(Q,Count,E) ->
+  lists:filter(
+      fun(X) -> 
+          MATCH = lists:filter( fun(XX) -> XX == X end, List),
+          length( MATCH ) > THS
+      end
+  ,AlarmList).
+
+queue_out(Q,Count) -> queue_out(Q,Count,[]).
+queue_out(Q,Count,E) ->
   case queue:out(Q) of
     {{value,V},Q2} ->
-        case V > 0 of
-           true -> VV = 1;
-           false -> VV = 0
-        end,
         case Count == 1 of
-            true -> VV+E;
-            false -> queue_count(Q2,Count-1,E+VV)
+            true  -> V++E;
+            false -> queue_out(Q2,Count-1,E++V)
         end;
-    _ -> error
+    _ -> E
   end.

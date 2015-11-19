@@ -206,18 +206,24 @@ stored(NAME) ->
                            AlarmList = lists:filter(
                                fun(X) ->
                                    TmpTime = watch_db:get_last("item#"++X),
-                                   (UserMsec< TmpTime) and ( TmpTime<Time)
+                                   UserMsec<TmpTime
+                                   %(UserMsec<TmpTime) and (TmpTime<Time)
                                end, 
-                           ItemList ),
+                           ItemList),
 
-                           Cronos = list_to_atom( "cronos#" ++ NAME ),
-                           try
-                               Cronos ! { notify, AlarmList }
-                           catch
-                               error:badarg -> false
-                           end,
-                
-                           notify_item(AlarmList,NAME,Time)
+                           case length( AlarmList ) > 0 of
+                               true ->
+                                   watch_db:set_last("user#"++NAME, Time),
+                                   watch_notify:notify( NAME,AlarmList),
+
+                                   Cronos = list_to_atom("cronos#"++NAME),
+                                   try
+                                       Cronos ! { notify, AlarmList }
+                                   catch
+                                       error:badarg -> false
+                                   end;
+                               false -> false
+                           end
                 end;
             false -> fase
         end;
@@ -226,6 +232,7 @@ stored(NAME) ->
         io:format("cronos user notify11:~p~n", [NAME]),
         io:format("cronos user notify22:~p~n", [Item]),
         Time = watch_misc:milliseconds(),
+        watch_db:set_last("user#"++NAME, Time),
         UserMsec = watch_db:get_last("user#"++NAME),
         AlarmList = lists:filter(
             fun(X) ->
@@ -235,14 +242,12 @@ stored(NAME) ->
         Item ),
         io:format("cronos user notify33:~p~n", [AlarmList]),
 
-       notify_item(AlarmList,NAME,Time)
+        case length(AlarmList) > 0 of
+             true -> watch_notify:notify( NAME,AlarmList);
+             false -> false
+        end;
+
+    { notice, Mesg } -> watch_notify:notice( NAME, Mesg )
+        
   end,
   stored(NAME).
-
-
-notify_item(List,Name,Time) ->
-    case length(List) > 0 of
-        true -> watch_notify:notify( Name,List ),
-                watch_db:set_last("user#"++Name, Time);
-        false -> io:format( "cronos notify_item:~p~n", [Name] ),false
-    end.

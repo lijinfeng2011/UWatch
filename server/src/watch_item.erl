@@ -14,7 +14,16 @@ start() ->
   spawn( fun() -> filter() end ).
 
 disk_log( ITEM, TYPE ) ->
-  {_,L} = watch_disk_log:read_log( ?ITEM_PATH ++ ITEM ++ "/" ++ TYPE ), L.
+  {_,L} = watch_disk_log:read_log( ?ITEM_PATH ++ ITEM ++ "/" ++ TYPE ),
+  case TYPE of
+      "count" -> 
+          C = length(L),
+          case C < 1440  of
+              true ->  L;
+              false -> lists:nthtail(C-1440, L)
+          end;
+      _ -> L
+  end.
 
 add( ITEM ) -> 
    watch_db:set_item( ITEM, watch_db:get_item( ITEM )).
@@ -101,12 +110,13 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
             false ->
                 NewQ = queue:in(Data,Q),
                 NewIndex = Index +1,
+                setindex(NAME,NewIndex),
                 watch_disk_log:write(MLog,"*"++integer_to_list(NewIndex)++"*"++Data)
         end,
         
         NewStat = Stat,
         NewFilter = Filter;
-    { cut,TIME, Msec } -> 
+    { cut, TIME, Msec } -> 
         NewQ = queue:new(),
         disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(queue:len(Q)) ),
         NewIndex = Index,NewFilter = Filter,
@@ -122,7 +132,6 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
         end;
       true -> NewQ = Q, NewIndex = Index,NewStat = Stat, NewFilter = Filter
   end,
-  setindex(NAME,NewIndex),
   stored(NAME,MLog,CLog,NewQ,NewIndex,NewStat,NewFilter).
 
 queue_to_stat(Q) ->

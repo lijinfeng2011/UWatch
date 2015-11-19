@@ -22,11 +22,12 @@
 -record(notify_level,{item,level}). 
 -record(remark,{item,aname}). 
 -record(cronos,{name,start=0,keep=0,u1={},u2={},u3={},u4={},u5={}}). 
+-record(cronos_notice2,{cronos,user,level}). 
 
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark,cronos]
+        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark,cronos,cronos_notice2]
     ,20000).
 
 init() ->
@@ -54,6 +55,7 @@ init() ->
     mnesia:create_table(notify_level,[{attributes,record_info(fields,notify_level)},{disc_copies, NodeList} ]),
     mnesia:create_table(remark,[{attributes,record_info(fields,remark)},{disc_copies, NodeList} ]),
     mnesia:create_table(cronos,[{attributes,record_info(fields,cronos)},{disc_copies, NodeList} ]),
+    mnesia:create_table(cronos_notice2,[{attributes,record_info(fields,cronos_notice2)},{type,bag} ]),
 
     mnesia:stop().
 
@@ -479,3 +481,43 @@ get_user_info_cronos( U ) ->
         {C,L} -> string:join( [ integer_to_list(C)|L], ":" );
         _ -> ""
     end.
+
+%% cronos_notice ========================================================
+%set_cronos_notice(Cronos,User,Level) ->
+%    Row = #cronos_notice{cronos = Cronos,user = User,level=Level},
+%    F = fun() -> mnesia:write(Row) end,
+%    mnesia:transaction(F).
+%
+cronos_notice_store( Name,AllUser,CronosList ) ->
+    io:format( "OOOO:~p ~p ~p~n", [ Name,AllUser,CronosList ] ),
+    F = fun() ->
+        mnesia:delete_object( #cronos_notice2{ cronos = Name } ),
+        lists:map(
+            fun(X) -> 
+                {Level,User} = X,
+                Row = #cronos_notice2{cronos = Name,user = User,level=Level},
+                io:format( "OOOO11:~p~p~p~n", [ Name,User,Level] ),
+                mnesia:write(Row)
+            end
+        ,CronosList),
+        lists:map(
+            fun(X) ->
+                case lists:keyfind(X,2,CronosList) of
+                    false -> 
+                        Row = #cronos_notice2{cronos = Name,user = X,level="u0"},
+                        io:format( "OOOO22:~p~p~p~n", [ Name,X,"u0"] ),
+                        mnesia:write(Row);
+                    _ -> true
+                end
+            end,
+        AllUser)
+    end,
+    mnesia:transaction(F).
+
+get_cronos_user_oncall(User) ->
+    do(qlc:q([ { X#cronos_notice2.level, X#cronos_notice2.cronos }|| X <- mnesia:table(cronos_notice2), X#cronos_notice2.user == User ])).
+
+list_cronos_notice() ->
+    do(qlc:q([{X#cronos_notice2.cronos,X#cronos_notice2.user,X#cronos_notice2.level} || X <- mnesia:table(cronos_notice2)])).
+
+

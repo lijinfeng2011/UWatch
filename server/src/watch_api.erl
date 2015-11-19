@@ -106,5 +106,10 @@ api(List) ->
     ["cronos","list"] -> watch_cronos:list();
     ["cronos","show",NAME] -> watch_cronos:show(NAME);
 
+    ["cronos_notice","list"] -> watch_cronos_notice:list();
+
+    ["data","record",ITEM, DATA] -> watch_accept_data:record( ITEM,DATA ),["ok"];
+    ["data","input",ITEM, DATA] -> watch_accept_data:input( ITEM,DATA ),["ok"];
+
     _ -> [ "undefined"] 
   end.

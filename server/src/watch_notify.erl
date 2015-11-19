@@ -80,7 +80,9 @@ notify( User, AlarmList ) ->
             end
     end.
 
-notify( User ) ->
+notify( User ) -> notice( User, "uwatch test 测试" ).
+
+notice( User, Mesg ) ->
     UserInfo = watch_user:getinfo(User),
     Method = watch_method:getmethod( User ),
     Token = watch_token:add(User),
@@ -89,7 +91,9 @@ notify( User ) ->
         [ "on" ] -> Stat = "1";
         _ -> Stat = "0"
     end,
-    send( User, Token, UserInfo, "uwatch test 测试", Method, Stat, "2" ).
+    io:format( "[INFO] notice ~p:~p~n", [ User, Mesg] ),
+    send( User, Token, UserInfo, Mesg, Method, Stat, "2" ).
+
 
 send( User, Token, UserInfo, Info, Method, Detail, Level ) ->
     inets:start(),

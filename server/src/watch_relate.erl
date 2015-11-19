@@ -13,13 +13,20 @@ del( ITEM, USER ) -> watch_db:del_relate(ITEM, USER).
 list() -> watch_db:list_relate().
 
 list4user(USER) ->
-  L = watch_follow:list(USER),
-  List = lists:map(
+  Self = lists:map( fun(XX) -> {"myself_"++USER,XX}end,watch_db:list_relate(USER)),
+  Follow = lists:append( lists:map(
     fun(X) ->
-       lists:map( fun(XX) -> {X,XX}end,watch_db:list_relate(X))
+       lists:map( fun(XX) -> {"follow_"++X,XX}end,watch_db:list_relate(X))
     end,
-    lists:append([L,[USER]])
-  ),
+    watch_follow:list(USER)
+  )),
+
+  Oncall = lists:append(lists:map(
+      fun(X) ->
+          {Level,U} = X,
+          lists:map( fun(XX) -> {"oncall_"++Level++"_"++U,XX}end,watch_db:list_relate(U))
+      end,
+  watch_cronos_notice:get_oncall(USER))),  %% [ { "u1", "cronos_base" }, { "", cronos_search } ]
  
   lists:map(
     fun(X) -> 
@@ -28,7 +35,7 @@ list4user(USER) ->
         PriIndex = watch_user:getindex(USER,Item),
         Owner ++ ":" ++ Item ++ ":" ++ integer_to_list( PubIndex - PriIndex )
     end, 
-    lists:append(List)
+    lists:append([Self,Follow,Oncall])
   ).
 
 list4user_itemnameonly(USER) ->
