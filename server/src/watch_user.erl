@@ -247,7 +247,9 @@ stored(NAME) ->
              false -> false
         end;
 
-    { notice, Mesg } -> watch_notify:notice( NAME, Mesg )
+    { notice, Mesg } -> watch_notify:notice( NAME, Mesg, "1" );
+
+    { send, Mesg, Stat, Level } -> watch_notify:notice( NAME, Mesg, Stat, Level )
         
   end,
   stored(NAME).

@@ -42,6 +42,50 @@ setu5( Name,U5 ) ->
         _ -> false
     end.
 
+
+getPeriod(Start, End) ->
+    case list_to_integer(Start) < list_to_integer(End) of
+        true -> getPeriod(list_to_integer(Start), list_to_integer(End), list()); 
+        false -> []
+    end.
+
+getPeriod(_, _, [] ) -> [];
+getPeriod(Begin, End, [F|R]) ->
+    [ getRecord(Begin, End, F) | getPeriod(Begin, End, R) ].
+
+getRecord(Begin, End, Name) ->
+    case watch_db:get_cronos(Name) of  
+        [{Name,Start,Keep,U1,_,_,_,_}|_] ->
+            case Start =< Begin of
+                true -> 
+                     case U1 of
+                         {_,List} -> getRecord(Name,Begin,End,Start,Keep,List,0,[]);
+                         _->[]
+                      end;
+                false -> 
+                     case Begin + 3600 < End of
+                         true -> getRecord( Begin + 3600, End, Name);
+                         false -> []
+                     end
+            end;
+        _ -> []
+    end.
+
+getRecord(Name,Start,End,Now,Keep,List,Index,R) ->
+    case Start > End of
+        true -> R;
+        false ->
+            Next = Now + Keep,
+            case Start > Now andalso Start < Next of
+                true ->
+                    Id = Index rem length(List),
+                    RR = R ++ [ Name ++ ":"++integer_to_list(Start)++":" ++ lists:nth(Id+1,List)++"\n" ],
+                    getRecord(Name,Start+3600,End,Now,Keep,List,Index,RR);
+                false ->
+                    getRecord(Name,Start,End,Next,Keep,List,Index+1,R)
+            end
+    end.
+
 getcal(Name) ->
     case watch_db:get_cronos(Name) of
         [{Name,Start,Keep,U1,U2,U3,U4,U5}|_] ->
@@ -111,22 +155,24 @@ mon() ->
 
 chk() ->
     Time = watch_misc:seconds(),
+    io:format( "AAA BBB:~n" ),
     lists:map( 
         fun(X) -> 
             CRONOS = list_to_atom( "cronos#"++ X ),
-            case whereis( CRONOS ) =:= undefined of
-                true -> true;
-                false -> 
+%            case whereis( CRONOS ) =:= undefined of
+%                true -> true;
+%                false -> 
+                  io:format( "AAA:~p~n", [ X ] ),
                   try
                     CRONOS ! { notice, Time }
                   catch
                     error:badarg -> io:format( "[ERROR]cronos chk notice user ~p fail.~n", [X] )
                   end
-            end
+%            end
         end,
     list()),
     timer:sleep( 120000 ),
-    mon().
+    chk().
 
 stored(Name,Q, AllUser, CronosList ) ->
     receive 
@@ -230,13 +276,18 @@ search_user_from_u(Q,Start,Keep,U,Time,AlarmList) ->
     end.
 
 search_user_from_u(Start,Keep,List,Time) ->
-    ID = ( trunc( ( Time - Start ) div Keep) rem length(List) ) +1,
     io:format( "cronos time:~p start:~p keep:~p len:~p~n",
         [ integer_to_list(Time), integer_to_list(Start),
           integer_to_list(Keep), integer_to_list(length(List))
         ]),
-    io:format( "cronos id:~p~n", [integer_to_list(ID)]),
-    lists:nth(ID,List).
+    case length(List) == 0 of
+        true -> "";
+        false ->
+
+            ID = ( trunc( ( Time - Start ) div Keep) rem length(List) ) +1,
+            io:format( "cronos id:~p~n", [integer_to_list(ID)]),
+            lists:nth(ID,List)
+    end.
 
 cronos_alarm(Q,Count,AlarmList) ->
   THS = Count / 2,

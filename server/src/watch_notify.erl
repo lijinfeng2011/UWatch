@@ -37,6 +37,9 @@ stored(Log) ->
 notify( User, AlarmList ) ->
     UserInfo = watch_user:getinfo(User),
     Method = watch_method:getmethod( User ),
+
+    TONotice = lists:append(  lists:map( fun(X) -> case string:tokens(X,"-") of   [ "uwatch"| UWATCH ] -> [ string:join( UWATCH, "-" )];  _ -> []  end end, string:tokens( Method, "|" ))),
+
     Token = watch_token:add(User),
     case watch_detail:getstat( User ) of
         [ "on" ] -> 
@@ -49,7 +52,21 @@ notify( User, AlarmList ) ->
                         true ->
                             ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
                             Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all","notify")], "@@@" ),
-                            send( User, Token, UserInfo, Info, Method, "1", watch_notify_level:get_s(X) );
+                            Level =  watch_notify_level:get_s(X),
+
+                            send( User, Token, UserInfo, Info, Method, "1", Level ),
+
+                            lists:map(
+                                fun( U ) -> 
+                                    io:format( "[ERROR]TONotice to ~p~n", [U] ),
+                                    USER = list_to_atom( "user_list#"++ U ),
+                                    try 
+                                        USER ! { send, Info, "1", Level }
+                                    catch
+                                        error:badarg -> io:format( "[ERROR]TONotice to ~p~n fail", [U] )
+                                    end
+                                end, 
+                            TONotice );
                         false -> false
                     end
                 end,
@@ -75,7 +92,19 @@ notify( User, AlarmList ) ->
                     MaxLevel =  watch_notify_level:get_max_s( NotifyItem2 ),
                     io:format( "NotifLevel:~p~n", [ NotifyItem2 ] ),
                     io:format( "NotifLevel:~p~n", [ MaxLevel ] ),
-                    send( User, Token, UserInfo, Info, Method, "0", MaxLevel );
+                    send( User, Token, UserInfo, Info, Method, "0", MaxLevel ),
+
+                    lists:map(
+                       fun( U ) ->
+                           io:format( "[ERROR]TONotice to ~p~n", [U] ),
+                           USER = list_to_atom( "user_list#"++ U ),
+                           try
+                               USER ! { send, Info, "0", MaxLevel }
+                           catch
+                               error:badarg -> io:format( "[ERROR]TONotice to ~p~n fail", [U] )
+                           end
+                       end,
+                   TONotice );
                 false -> false
             end
     end.
@@ -83,16 +112,21 @@ notify( User, AlarmList ) ->
 notify( User ) -> notice( User, "uwatch test 测试" ).
 
 notice( User, Mesg ) ->
-    UserInfo = watch_user:getinfo(User),
-    Method = watch_method:getmethod( User ),
-    Token = watch_token:add(User),
-    io:format( "[INFO] test notify for: ~p~n", [User] ),
     case watch_detail:getstat( User ) of
         [ "on" ] -> Stat = "1";
         _ -> Stat = "0"
     end,
+    notice( User, Mesg, Stat ).
+
+notice( User, Mesg, Stat ) -> notice( User, Mesg, Stat, "2" ).
+
+notice( User, Mesg, Stat, Level ) ->
+    UserInfo = watch_user:getinfo(User),
+    Method = watch_method:getmethod( User ),
+    Token = watch_token:add(User),
+    io:format( "[INFO] test notify for: ~p~n", [User] ),
     io:format( "[INFO] notice ~p:~p~n", [ User, Mesg] ),
-    send( User, Token, UserInfo, Mesg, Method, Stat, "2" ).
+    send( User, Token, UserInfo, Mesg, Method, Stat, Level ).
 
 
 send( User, Token, UserInfo, Info, Method, Detail, Level ) ->

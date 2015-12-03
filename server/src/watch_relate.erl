@@ -16,6 +16,34 @@ list4user(USER) ->
   Self = lists:map( fun(XX) -> {"myself_"++USER,XX}end,watch_db:list_relate(USER)),
   Follow = lists:append( lists:map(
     fun(X) ->
+       lists:map( fun(XX) -> {"myself_"++USER,XX}end,watch_db:list_relate(X))
+    end,
+    watch_follow:list(USER)
+  )),
+
+  Myself = sets:to_list(sets:from_list( lists:append([Self,Follow]) )),
+  
+  Oncall = lists:append(lists:map(
+      fun(X) ->
+          {Level,U} = X,
+          lists:map( fun(XX) -> {"oncall_"++Level++"_"++U,XX}end,watch_db:list_relate(U))
+      end,
+  watch_cronos_notice:get_oncall(USER))),  %% [ { "u1", "cronos_base" }, { "", cronos_search } ]
+ 
+  lists:map(
+    fun(X) -> 
+        {Owner,Item} = X,
+        PubIndex = watch_item:getindex(Item),
+        PriIndex = watch_user:getindex(USER,Item),
+        Owner ++ ":" ++ Item ++ ":" ++ integer_to_list( PubIndex - PriIndex )
+    end, 
+    lists:append([Myself,Oncall])
+  ).
+
+list4userdetail(USER) ->
+  Self = lists:map( fun(XX) -> {"myself_"++USER,XX}end,watch_db:list_relate(USER)),
+  Follow = lists:append( lists:map(
+    fun(X) ->
        lists:map( fun(XX) -> {"follow_"++X,XX}end,watch_db:list_relate(X))
     end,
     watch_follow:list(USER)

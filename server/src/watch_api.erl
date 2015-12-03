@@ -48,7 +48,7 @@ api(List) ->
     ["last","list"] ->  watch_last:list();
 
     ["filter","add",USER,NAME,CONT] ->  
-        lists:foreach( fun(X) -> watch_filter:add(NAME,X,USER,86400) end,string:tokens( CONT, ":" ) ),["ok"];
+        lists:foreach( fun(X) -> watch_filter:add(NAME,X,USER,3600) end,string:tokens( CONT, ":" ) ),["ok"];
     ["filter","add",USER,TIME,NAME,CONT] -> 
         T = list_to_integer(TIME),
         lists:foreach( fun(X) -> watch_filter:add(NAME,X,USER,T) end,string:tokens( CONT, ":" ) ),["ok"];
@@ -105,11 +105,15 @@ api(List) ->
     ["cronos","get","now",NAME] -> watch_cronos:getnow(NAME);
     ["cronos","list"] -> watch_cronos:list();
     ["cronos","show",NAME] -> watch_cronos:show(NAME);
+    ["cronos","period",START,END] -> watch_cronos:getPeriod(START,END);
 
     ["cronos_notice","list"] -> watch_cronos_notice:list();
 
     ["data","record",ITEM, DATA] -> watch_accept_data:record( ITEM,DATA ),["ok"];
     ["data","input",ITEM, DATA] -> watch_accept_data:input( ITEM,DATA ),["ok"];
+
+    ["data","record",ITEM, NODE, DATA] -> watch_accept_data:record( ITEM,NODE,DATA ),["ok"];
+    ["data","input",ITEM, NODE, DATA] -> watch_accept_data:input( ITEM,NODE,DATA ),["ok"];
 
     _ -> [ "undefined"] 
   end.
