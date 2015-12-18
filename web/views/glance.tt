@@ -2,17 +2,19 @@
 <html>
 <head>
     <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
-    <link rel="stylesheet" href="/css/glance.css">
+    <link rel="stylesheet" href="/css/calendar.css">
+    <link rel="stylesheet" href="/css/glance.css?v=1">
     <link rel="stylesheet" href="/css/jquery.swipeButton.css" />
     <meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1.0, initial-scale=1.0,">
     <script src="/javascripts/lib/jquery.min.js"></script>
-    <script src="/javascripts/init.js"></script>
-    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.js"></script>
+    <script src="/javascripts/init.min.js"></script>
+    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.custom.js"></script>
     <script src="/javascripts/lib/jquery.md5.min.js"></script>
 
-    <script src="/javascripts/lib/goTop.js"></script>
-    <script src="/javascripts/global.js"></script>
-    <script src="/javascripts/glance.js"></script>
+    <script src="/javascripts/global.min.js"></script>
+    <script src="/javascripts/glance.min.js"></script>
+    <script src="/javascripts/util/goTop.min.js"></script>
+    <script src="/javascripts/util/calendar.min.js"></script>
 </head>
 
 <body>
@@ -20,6 +22,15 @@
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>浏览报警</h1>
     <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
+
+[% IF isOncall %]
+    <div data-role="navbar">  
+       <ul>  
+          <li><a href="#" id='self_link'>个人订阅报警</a></li>  
+          <li><a href="#" id='oncall_link'>值班订阅报警</a></li>  
+       </ul>  
+    </div>
+[% END %]
   </div>
 
   <div data-role="content">
@@ -37,21 +48,42 @@
 
     <div style="margin: 10px">
        <div class="mesg-box" style="display:none"></div>
-
-       <ul id="mainList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索">
-     [% FOREACH msgGroup IN mesgGroup %]
-           <li name="[% msgGroup.name %]" data-icon="false">
-               <a href="/mesgDetail?type=new&id=[% msgGroup.name %]" class='message-link' data-transition="flip">[% msgGroup.name %]</a>
-               <span class='ui-li-count'>[% msgGroup.count %]</span>
-               <!-- <a href="#" class="status-icon" data-icon="alert"></a> --!>
+       
+       <div id="selfPanel">
+       <ul id="selfList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索">
+       [% FOREACH selfMesg IN selfMesgGroup %]
+           <li name="[% selfMesg.name %]" data-icon="false">
+           [% IF selfMesg.count %]
+               <a href="/mesgDetail?type=new&id=[% selfMesg.name %]" class='message-link' data-transition="flip">[% selfMesg.name %]</a>
+               <span class='ui-li-count'>[% selfMesg.count %]</span>
+           [% ELSE %]
+               <a href="/mesgDetail?type=new&id=[% selfMesg.name %]" class='message-link gary' data-transition="flip">[% selfMesg.name %]</a>
+           [% END %]
            </li>
-     [% END %]
+       [% END %]
        </ul>
+       </div>
 
-    </div>
-  </div>
+[% IF isOncall %] 
+       <div id="oncallPanel">
+       <ul id="oncallList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索">
+       [% FOREACH oncallMesg IN oncallMesgGroup %]
+           <li name="[% oncallMesg.name %]" data-icon="false">
+           [% IF oncallMesg.count %]
+               <a href="/mesgDetail?type=new&id=[% oncallMesg.name %]" class='message-link' data-transition="flip">[% oncallMesg.name %] <span class='gary'> ([% oncallMesg.biz %])</span></a>
+               <span class='ui-li-count'>[% oncallMesg.count %]</span>
+           [% ELSE %]
+               <a href="/mesgDetail?type=new&id=[% oncallMesg.name %]" class='message-link gary' data-transition="flip">[% oncallMesg.name %] ([% oncallMesg.biz %])</a>
+           [% END %]
+           </li>
+       [% END %]
+       </ul>
+       </div>
+[% END %]
 
-</div>
+    </div> <!--End margin: 10px --!>
+  </div> <!--End content --!>
+</div> <!--End Page--!>
 
 </body>
 </html>

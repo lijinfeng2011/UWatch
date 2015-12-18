@@ -6,10 +6,7 @@
   <script src="/javascripts/lib/underscore-min.js"></script>
   <script src="/javascripts/lib/hideAddressBar.js"></script>
 
-  <script src="/javascripts/util/iscroll.min.js"></script>
-  <script src="/javascripts/util/jquery.swipeButton.min.js"></script>
-
-  <script src="/javascripts/mesgDetail.min.js"></script>
+  <script src="/javascripts/mesgDetail_desktop.min.js"></script>
 
   <div data-role="header" data-position="fixed" data-theme="b">
     <a href="#pageGlance" data-role="button" data-transition="flip">返回</a>
@@ -17,10 +14,10 @@
   </div>
 
   <div data-role="content" data-theme="d">
-    <div id="wrapperContent1" class="wrapper">
-      <div id="scrollerContent1" class="scroller">
-        <div id="pullDown">
-          <span class="pullDownIcon"></span><span class="pullDownLabel">下拉获取最新数据...</span>
+    <div id="wrapperContent1" class="wrapper_desktop">
+      <div id="scrollerContent1">
+        <div id="pullDown" onclick="getNew()">
+          <span class="pullDownIcon"></span><span class="pullDownLabel">点击此处获取最新数据...</span>
         </div>
         
         <div class="listHeader">
@@ -41,15 +38,24 @@
 
         <ul data-role="listview" id="contentList1" class="contentList">
 	  [% FOREACH message IN mesgs %]
-            <li data-swipeurl="#" [% oldview ? 'class="gary"' : '' %]><span class="index hide">[% message.idx %] </span><span class="node hide">[% message.node %]</span>[% message.content %]</li>
+            <li data-swipeurl="#" [% oldview ? 'class="gary"' : '' %]>
+                <button data-role="none" [% oldview ? ' disabled="disabled"' : '' %] class="filterBtn" onclick="filter(event)">屏蔽1小时</button>
+                <span class="index hide">[% message.idx %] </span>
+                <span class="node hide">[% message.node %]</span>
+                [% message.content %]
+            </li>
           [% END %] 
 	</ul>
 	
-        <div id="pullUp">
-          <span class="pullUpIcon"></span><span class="pullUpLabel">上拉获取历史数据...</span>
+        <div id="pullUp" onclick="getHistory()">
+          <span class="pullUpIcon"></span><span class="pullUpLabel">点击此处获取历史数据...</span>
         </div>
       </div>
     </div>
   </div>
+
+  <script> 
+  (function($){ $('.wrapper_desktop').parent('div').css('padding','0px'); })(jQuery);
+  </script>
 
 </div>

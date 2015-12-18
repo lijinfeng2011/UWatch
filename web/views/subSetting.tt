@@ -1,0 +1,63 @@
+<div data-role="page" id="subSettingPage" data-close-btn="none">
+  <div data-role="header">
+    <h1>屏蔽业务设置</h1>
+  </div>
+
+  <div data-role="content">
+    <div style="" class="mesg-box"><p>请勾选希望屏蔽的业务</p></div>
+    <form id="bizSetting" method="post" action="/subscribe">
+      <div data-role="fieldcontain">
+[% FOREACH biz IN Biz %]
+         <input type="checkbox" name="[% biz %]" id="[% biz %]">
+         <label for="[% biz %]">[% biz %]</label>
+[% END %]
+      </div>
+      <div data-role="controlgroup" data-type="horizontal">
+        <input type="submit" data-inline="true" value="确认" onclick="filter(event)">
+        <input type="submit" data-inline="true" value="清空" onclick="cancelAll()">
+      </div>
+    </form>
+  </div>
+
+<script>
+  $(document).on('pagebeforeshow', '#subSettingPage', function() {
+     if (localStorage.filterBiz) {
+         var tmp = localStorage.filterBiz.split("-");
+         for (var idx in tmp) {
+             $("input[name='"+tmp[idx]+"']").attr("checked",true).checkboxradio("refresh");
+         }
+     } 
+  });
+
+  function filter( event ) {
+      var bizArray = new Array();
+      $.each( $('.ui-checkbox'), function(n, biz){
+         if ( $(biz).find('label').hasClass("ui-checkbox-on") ) {
+            bizArray.push($(biz).find('label').text());
+         }
+      });
+
+      if (bizArray.length > 0) {
+         localStorage.filterBiz = bizArray.join('-');
+         changeUrl();
+      } else {
+         localStorage.filterBiz = '';
+      }
+  }
+
+  function cancelAll() {
+      localStorage.filterBiz = '';
+      changeUrl();
+  }
+
+  function changeUrl() {
+      var url = $("#bizSetting").attr('action') + '?fname=' + localStorage.filterBiz;
+      $("#bizSetting").attr('action', url);       
+  }
+</script>
+
+  <div data-role="footer">
+  </div>
+
+</div>
+

@@ -39,7 +39,7 @@
              </div>
              <div data-role="fieldcontain">
                 <label for="following" class="select">跟随订阅</label>
-                <select id="following" name="following" data-native-menu="true" multiple="multiple">
+                <select id="following" name="following" data-native-menu="false" multiple="multiple">
                 [% FOREACH person IN followUsers %]
                    <option value="[% person.name %]" [% person.followed ? ' selected="true"' : '' %]>[% person.name %]</option>
                 [% END %]
@@ -50,6 +50,14 @@
           </div>
        </div>
 
+      <div data-role="collapsible" class="filter-collapse" data-name="filter-manager" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:20px 0">
+         <h3 style="margin: 0;">报警屏蔽</h3>
+         <div class="filter-manager">
+             <ul id="filterList" data-role="listview" data-inset="true" data-filter="true" data-filter-placeholder="搜索" data-split-theme="a"> 
+             </ul>
+         </div>
+      </div>
+ 
       <div style="margin:20px 0">
          <div data-role="collapsible" data-name="alarm-change" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:30px 0">
          <h3 style="margin: 0;">报警信息</h3>
@@ -57,30 +65,37 @@
             <fieldset data-role="controlgroup">
                <input type="checkbox" name="stopAlarm" id="stopAlarm" onclick="triggerAlarm()" [% stopAlarm ? '' : "checked='checked'" %] >
                <label for="stopAlarm" id="alarmValue">接收报警信息</label>
-               <input type="checkbox" name="fullFormat" id="fullFormat" onclick="triggerFormat()" [% fullFormat ? "checked='checked'" : '' %] [% stopAlarm ? 'disabled="true"' : '' %] >
+               <input type="checkbox" name="fullFormat" id="fullFormat" onclick="triggerFormat()" [% fullFormat ? "checked='checked'" : '' %]>
                <label for="fullFormat" id="formatValue">接收详细信息</label>
             </fieldset>
 
-            <fieldset id='typeGroup' data-role="controlgroup" data-type="horizontal">
-               <input type="radio" name="alarmType" onchange="changeText('sms')" value="sms" id="sms" [% stopAlarm ? 'disabled="true"' : '' %] [% method == 'sms' ? ' checked="true"' : '' %]>
-               <label for="sms">短信</label>
-               <input type="radio" name="alarmType" onchange="changeText('blue')" value="blue" id="blue" [% stopAlarm ? 'disabled="true"' : '' %] [% method == 'blue' ? ' checked="true"' : '' %]>
-               <label for="blue">蓝信</label>
-               <input type="radio" name="alarmType" onchange="changeText('zy')" value="zy" id="zy" [% stopAlarm ? 'disabled="true"' : '' %] [% method == 'zy' ? ' checked="true"' : '' %]>
-               <label for="zy">智鹰</label>
-               <input type="radio" name="alarmType" onchange="changeText('qalarm')" value="qalarm" id="qalarm" [% stopAlarm ? 'disabled="true"' : '' %] [% method == 'qalarm' ? ' checked="true"' : '' %]>
-               <label for="qalarm">Qalarm</label>
-            </fieldset>
+            <div id="alarm-form" class="alarm-change">
+               <div data-role="fieldcontain">
+                  <label for="sms">短信接收</label>
+                  <input type="tel" name="sms" value="[% sms %]" placeholder="输入您的手机号码...">
+               </div> 
+               <div data-role="fieldcontain">
+                  <label for="blue">蓝信接收</label>
+                  <input type="tel" name="blue" value="[% blue %]" placeholder="输入您的手机号码...">
+               </div>
+               <div data-role="fieldcontain"> 
+                  <label for="zy">智鹰接收</label>
+                  <input type="text" name="zy" value="[% zy %]" placeholder="输入您的智鹰账号">
+               </div>
+               <div data-role="fieldcontain"> 
+                  <label for="qalarm">QAlarm</label>
+                  <input type="text" name="qalarm" value="[% qalarm %]" placeholder="输入您的域名账号">
+               </div>
+               <div data-role="fieldcontain"> 
+                  <label for="uwatch">转发接收</label>
+                  <input type="text" name="uwatch" value="[% uwatch %]" placeholder="输入被转发人账号">
+               </div>
 
-            <input type="text" name="alarmAccount" value="[% account %]" placeholder="请选择方式后输入您的报警账号" [% stopAlarm ? 'disabled="true"' : '' %] >
-
-            <div data-role="controlgroup" data-type="horizontal" id="alarmBtnGroup">
-               <input type="button" id="methodBtn" onclick="ajaxSubmitMethod(event)" value="确认提交" [% stopAlarm ? 'disabled="true"' : '' %]>
-               <input type="button" id="testBtn" onclick="triggerTest()" value="报警测试" [% stopAlarm ? 'disabled="true"' : '' %]>
+               <div data-role="controlgroup" data-type="horizontal" id="alarmBtnGroup">
+                 <input type="button" id="methodBtn" onclick="ajaxSubmitMethod(event)" value="设置完成">
+                 <input type="button" id="testBtn" onclick="triggerTest()" value="设置测试">
+              </div>
             </div>
-
-            <input type="hidden" name="defaultType" value="[% method %]">
-            <input type="hidden" name="defaultAccount" value="[% account %]">
          </div>
       </div>
 
@@ -93,48 +108,11 @@
             <input type="password" name="confirm-pwd" placeholder="再次输入新密码..">
             <input type="button" onclick="ajaxChangePWD(event)" data-theme="a" value="确定修改">
          </div>
-      </div> 
-
+      </div>
+ 
     </div>
   </div>
 
-  <style type="text/css" media="all">
-     @media (min-width: 28em) {
-        .ui-field-contain>label, 
-        .ui-field-contain .ui-controlgroup-label, 
-        .ui-field-contain>.ui-rangeslider>label {
-           width: 10%;
-        }
-        .ui-field-contain>label~[class*=ui-], 
-        .ui-field-contain .ui-controlgroup-controls {
-           width: 88%;
-        }
-        .profile-wrapper {
-           margin: 10px; 20px;
-        }
-     }
-     @media (max-width: 28em) {
-        .ui-collapsible-content {
-           padding: 0.5em;
-        }
-        .profile-wrapper {
-            margin: 10px;
-        }
-        #typeGroup .ui-controlgroup-controls {
-            width: 100%;
-        }
-        #typeGroup .ui-radio {
-            width: 25%;
-        }
-        #alarmBtnGroup .ui-controlgroup-controls {
-            width: 100%;
-        }
-        #alarmBtnGroup .ui-btn {
-            width: 35%;
-        }
-     }
-  </style>
-
-  <script src="/javascripts/profile.js"></script>
+  <script src="/javascripts/profile.min.js"></script>
 </div>
 

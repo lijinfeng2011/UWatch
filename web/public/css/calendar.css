@@ -1,0 +1,17 @@
+table,th,td, caption{ margin:0px; padding:0px; line-height:18px; color:#000; font-size:12px; border:1px;}
+.mytable {border-bottom:1px solid #FFF;border-right:1px solid #FFF;width:100%;}
+.mytable th{ background:#BCE774; text-align:center; font-weight:normal; min-width:100px;  padding:6px;}
+.mytable caption{ background:#328AA4; color:#FFF; font-weight:bold; line-height:30px; border:1px solid #FFF; padding: 5px;}
+.mytable td {background:#ECFBD4; padding:3px;  }
+.mytable th {border-top:1px solid #FFF;border-left:1px solid #FFF; }
+.mytable td {border-bottom:1px solid rgb(191, 215, 255);border-right:1px solid rgb(191, 215, 255);}
+.mytable tr td:first-child {border-left:1px solid rgb(191, 215, 255);}
+.mytable tr:first-child {border-top:1px solid rgb(191, 215, 255);}
+.mytable .day { min-width:120px; height:120px; }
+.mytable .day .date { float:right; color:gray; font-size:20px; }
+.mytable .today .day .date { font-size: 42px; font-weight: bold;}
+.mytable .grayDay { background:gray; }
+.mytable .today { background:rgb(191, 215, 255); }
+.diagram { width:3em; height:1em; }
+.pDiagram { text-align: left; }
+.task { margin-bottom: 1px; font-size:10px; text-shadow: none; height:19px;}

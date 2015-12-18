@@ -2,35 +2,113 @@ $(document).on('pageload', '#profile', function() {
     $('#methodBtn').click( ajaxSubmitMethod );
 });
 
-function changeText( value ) {
-    var defaultType = $("input[name='defaultType']").val();
-    var defaultAccount = $("input[name='defaultAccount']").val();
-    var $txtBox = $("input[name='alarmAccount']");
+$(document).on('pageshow', '#profile', function() {
+    $('.filter-collapse').collapsible({
+        expand: function(event, ui) { getFilterItems(); },
+        collapse: function(event, ui) { $('#filterList').empty(); }
+    });
+    var check = $('#alarmValue').hasClass("ui-checkbox-on") ? 'on' : 'off';
+    if ( check == 'off' ) {
+        $(".alarm-change input[name='fullFormat']").checkboxradio('disable');
+        $("#alarm-form input[type='button']").button('disable');
+        $("#alarm-form input[type='text']").textinput('disable');
+        $("#alarm-form input[type='tel']").textinput('disable');
+        $("#alarm-form label").css('color', '#aaa');
+    } else {
+        $(".alarm-change input[name='fullFormat']").checkboxradio('enable');
+        $("#alarm-form input[type='button']").button('enable');
+        $("#alarm-form input[type='text']").textinput('enable');
+        $("#alarm-form input[type='tel']").textinput('enable');
+        $("#alarm-form label").css('color', '');
+   }
+});
 
-    if ( value == defaultType ) { $txtBox.val(defaultAccount); return; } 
- 
-    if ( value == 'sms' )  { $txtBox.val('').attr('placeholder', '留个手机号码呗...'); }
-    if ( value == 'blue' ) { $txtBox.val('').attr('placeholder', '留个蓝信账号呗...(手机号就行)'); }
-    if ( value == 'zy' )   { $txtBox.val('').attr('placeholder', '留个智鹰组账号呗...'); }
-    if ( value == 'qalarm' ) { $txtBox.val('').attr('placeholder', '留个Qalarm账号呗...'); }
+function getFilterItems() {
+    sendAjaxRequest({ 
+        url: "/ajaxGetFilterItems",
+        before: showLoader,
+        success: filterItems,
+        complete: hideLoader,
+        error: ajax_error });
+
+    function filterItems(data) {
+        var $list = $('#filterList');
+        $.each (data.response, function(n, value) {
+            var $li = $('<li></li>').appendTo($list);
+            var $item = $('<div data-role="collapsible" class="filter-collapse" data-name="'+n+'">');
+            $('<h3 style="margin: 0;"><span class="item">'+n+'</span></h3>').appendTo($item);
+
+            var $nodeList = $('<div class="subscribe-box"></div>');
+            var $fieldset = $('<fieldset data-role="controlgroup"></fieldset>').appendTo($nodeList);
+
+            $.each (value, function(i, node) {
+                var sp = node.split(':');                
+                $('<label for="'+sp[0]+'">'+sp[0]+' (by:'+sp[1]+')</label>').appendTo($fieldset);
+                if (sp[2] == '1') { 
+                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+'" onclick="filterRequest(event)" checked="checked">').appendTo($fieldset);
+                } else {
+                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+'" disabled="disabled" checked="checked">').appendTo($fieldset);
+                }
+            });
+                                 
+            $nodeList.appendTo($('<div class="content"></div>').appendTo($item));
+            $item.appendTo($li);
+        });
+
+        $('.filter-collapse').collapsible();
+        $('.content').trigger("create");
+    }
+}
+
+function filterRequest(event) {
+    var fstatus = event.target.checked ? 1 : 0;
+    var node = event.target.id,
+        name = $(event.target).closest('.filter-collapse').attr('data-name');
+
+    if ( fstatus == 1 ) {
+        sendAjaxRequest({ 
+            url: "/ajaxSetFilterMessage?name=" + name + '&node=' + node,
+            before: showLoader,
+            success: set_success,
+            complete: hideLoader,
+            error: ajax_error });
+     } else {
+        sendAjaxRequest({ 
+            url: "/ajaxDelFilterMessage?name=" + name + '&node=' + node,
+            before: showLoader,
+            success: del_success,
+            complete: hideLoader,
+            error: ajax_error });
+     }
+
+    function del_success(data) {
+        if ( data.response === 1 ) { popOver('Sorry，稍后再试下嘛！'); } 
+        if ( data.response === 0 ) { popOver('取消屏蔽成功!'); } 
+    }
+
+    function set_success(data) {
+        if ( data.response === 1 ) { popOver('Sorry，稍后再试下嘛！'); } 
+        if ( data.response === 0 ) { popOver('屏蔽成功!'); } 
+    }
 }
 
 function ajaxSubmitMethod() {
-    var method = $("input[name='alarmType']:checked").val() || '';
-    var account = $("input[name='alarmAccount']").val() || '';
+    var qArray = [];
+    $.each($('#alarm-form input'), function(n, input) {
+        var $input = $(input);
+        if ( $input.val() && ($input.attr('type')=='tel' || $input.attr('type')=='text') ) {
+            qArray.push($input.attr('name') + '-' + $input.val());
+        }
+    });
+    
+    if ( qArray.length == 0 ) { popOver('留个报警方式呗～'); return; }
 
-    if ( !method.length ) { popOver('选个报警方式呗～'); return; }
-    if ( !account.length) { popOver('留个账号信息呗～'); return; }
-
-    var ajaxOpt = {
-        url: "/ajaxSetMethod?value=" + method + '-' + account,
+    sendAjaxRequest({ 
+        url: "/ajaxSetMethod?value=" + qArray.join(":"),
         before: showLoader,
         success: method_success,
         complete: hideLoader,
-        error: ajax_error
-    };
-
-    sendAjaxRequest( ajaxOpt );
+        error: ajax_error });
 
     function method_success(data) {
         if ( data.response === 1 ) { 
@@ -39,8 +117,6 @@ function ajaxSubmitMethod() {
 
         if ( data.response === 0 ) { 
             popOver('接收报警方式设置成功～'); 
-            $("input[name='defaultType']").val(method);
-            $("input[name='defaultAccount']").val(account);
         } 
     }
 }
@@ -81,29 +157,23 @@ function ajaxSubmitProfile( event ) {
 
     if ( follows.length ) { param = param + '&follower=' + follows; }
 
-    var ajaxOpt = {
+    sendAjaxRequest({
         url: encodeURI("/ajaxSetProfile" + param),
         before: showLoader,
         success: ajax_success,
         complete: hideLoader,
-        error: ajax_error
-    };
-
-    sendAjaxRequest( ajaxOpt );
+        error: ajax_error });
 }
 
 function triggerAlarm() {
     var check = $('#alarmValue').hasClass("ui-checkbox-on") ? 'off' : 'on';
-        
-    var ajaxOpt = {
+
+    sendAjaxRequest({ 
         url: "/ajaxSetAlarm?value=" + check,
         before: showLoader,
         success: success_Alarm,
         complete: hideLoader,
-        error: ajax_error
-    };
-
-    sendAjaxRequest( ajaxOpt );
+        error: ajax_error });
 
     function success_Alarm( data ) {
         var check = $('#alarmValue').hasClass("ui-checkbox-on") ? 'off' : 'on';
@@ -111,17 +181,17 @@ function triggerAlarm() {
             popOver('Sorry，稍后再试下嘛！'); 
         } else if ( data.response === 0 ) {
             if ( check == 'on' ) {
-                $('#fullFormat').checkboxradio('disable');
-                $("input[type='radio']").checkboxradio('disable');
-                $('#testBtn').button('disable');
-                $('#methodBtn').button('disable');
-                $("input[name='alarmAccount']").textinput('disable');
+                $(".alarm-change input[name='fullFormat']").checkboxradio('disable');
+                $("#alarm-form input[type='button']").button('disable');
+                $("#alarm-form input[type='text']").textinput('disable');
+                $("#alarm-form input[type='tel']").textinput('disable');
+                $("#alarm-form label").css('color', '#aaa');
             } else {
-                $('#fullFormat').checkboxradio('enable');
-                $("input[type='radio']").checkboxradio('enable');
-                $('#testBtn').button('enable');
-                $('#methodBtn').button('enable');
-                $("input[name='alarmAccount']").textinput('enable');
+                $(".alarm-change input[name='fullFormat']").checkboxradio('enable');
+                $("#alarm-form input[type='button']").button('enable');
+                $("#alarm-form input[type='text']").textinput('enable');
+                $("#alarm-form input[type='tel']").textinput('enable');
+                $("#alarm-form label").css('color', '');
             }
             popOver('恭喜！成功了yeah～'); 
         }
@@ -129,28 +199,22 @@ function triggerAlarm() {
 }
 
 function triggerTest() {
-    var ajaxOpt = {
+    sendAjaxRequest({
         url: "/ajaxTriggerTest",
         before: showLoader,
         success: ajax_success,
         complete: hideLoader,
-        error: ajax_error
-    };
-    sendAjaxRequest(ajaxOpt); 
+        error: ajax_error }); 
 }
 
 function triggerFormat() {
     var check = $('#formatValue').hasClass("ui-checkbox-on") ? 'off' : 'on';
-        
-    var ajaxOpt = {
+    sendAjaxRequest({
         url: "/ajaxSetFormat?value=" + check,
         before: showLoader,
         success: ajax_success,
         complete: hideLoader,
-        error: ajax_error
-    };
-
-    sendAjaxRequest( ajaxOpt );
+        error: ajax_error });
 }
 
 function ajaxChangePWD( event ) {
@@ -178,18 +242,14 @@ function ajaxChangePWD( event ) {
 
     var old_pwd = $.md5( $('input[name="old-pwd"]').val() );
     var new_pwd = $.md5( $('input[name="new-pwd"]').val() );
-
     var param = '?old=' + old_pwd + '&new=' + new_pwd;
 
-    var ajaxOpt = {
+    sendAjaxRequest({
         url: "/ajaxChangePWD" + param,
         before: showLoader,
         success: success_PWD,
         complete: hideLoader,
-        error: ajax_error
-    };
-
-    sendAjaxRequest( ajaxOpt );
+        error: ajax_error });
 
     function success_PWD(data) {
         var responseHTML = '';

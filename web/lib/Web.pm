@@ -13,20 +13,24 @@ use Alarm;
 use URI::Escape;
 
 our $VERSION = '0.1';
-
 our %loginList;
 
 hook 'before' => sub {
-    if ( !session('mobile_user') && request->path_info =~ m{^/glance|^/subscribe|^/mesgDetail|^/profile} ) {
-        redirect '/homepage';
+    if (request->user_agent =~ /iphone|android/i) { session 'view' => 'mobile'; } 
+    else { session 'view' => 'desktop'; }
+
+    if (!session('mobile_user')&& request->path_info=~m{^/glance|^/subscribe|^/mesgDetail|^/profile}){
+        if (session('view') eq 'desktop') { template 'homepage_desktop.tt', {}; } 
+        else { template 'homepage.tt', {}; }
     }
 };
 
+################# Route ####################
 get '/' => sub {
-    if ( session('mobile_user') ) {
-        redirect '/glance';
-    } else {
-        redirect '/homepage';
+    if ( session('mobile_user') ) { renderGlance(); } 
+    else {
+        if ( session('view') eq 'desktop' ) { template 'homepage_desktop.tt', {}; } 
+        else { template 'homepage.tt', {}; }
     }
 };
 
@@ -35,27 +39,32 @@ get '/homepage' => sub {
 
     # Access via with token;
     if ( $param{token} ) {
-        my $user = Alarm::GetUserViaToken( $param{token} );
-        if ( $user && $user ne 'error' ) { 
-            session 'mobile_user' => $user;  
-            redirect 'glance';
-        } 
-    }
- 
-    if ( session('mobile_user') ) {
-        redirect '/glance';
+        my $user = Alarm::GetUserViaToken($param{token});
+        if ( $user && $user ne 'error' ) {
+            session 'mobile_user' => $user;
+            renderGlance();
+        }
+    } elsif ( session('mobile_user') ) {
+        renderGlance();
+    } elsif ( session('view') eq 'desktop' ) {
+        template 'homepage_desktop.tt', { status => $param{error} };
     } else {
         template 'homepage.tt', { status => $param{error} };
     }
 };
 
-get '/login' => sub {
-    template 'login.tt';
-};
+get '/login' => sub { template 'login.tt'; };
 
-any ['get', 'post'] => '/logout' => sub {
+get '/logout' => sub {
     session->destroy;
-    redirect '/homepage';
+
+    if (request->user_agent =~ /iphone|android/i) { 
+        session 'view' => 'mobile'; 
+        template 'homepage.tt', {}; 
+    } else { 
+        session 'view' => 'desktop'; 
+        template 'homepage_desktop.tt', {};
+    }
 };
 
 post '/checkin' => sub {
@@ -72,8 +81,7 @@ post '/checkin' => sub {
 
             if ( not $response ) {
                 session 'mobile_user' => $user;
-                my $mesgGroup = Alarm::GetMessageGroup( $user );
-                template 'glance.tt', { user => session('mobile_user'), mesgGroup => $mesgGroup };
+                renderGlance();
             } else {
                 template '/homepage', { status => $response, token => $token };
             }
@@ -84,19 +92,19 @@ post '/checkin' => sub {
     }
 };
 
-get '/glance' => sub {
-    my $mesgGroup = Alarm::GetMessageGroup( session('mobile_user') );
-    template 'glance.tt', { user => session('mobile_user'), mesgGroup => $mesgGroup };
-};
+get '/glance' => sub { renderGlance(); };
 
-get '/subscribe' => sub {
-    my %param = %{request->params};
-
+any ['get', 'post'] => '/subscribe' => sub {
     my $response = Alarm::GetAllAlarmItem();
     return template 'subscribe.tt', { user => session('mobile_user'), error => 1 } unless $response;
 
     my $groupMap = { name => [] }; my $countMap = {};
- 
+    
+    if ( my $fname = request->params->{fname} ) {
+        map {
+            $response->{$_} = {} if exists $response->{$_};
+        } split('-', $fname);
+    } 
     map {
         my $group = $_; 
         push @{$groupMap->{name}}, $group;
@@ -114,6 +122,11 @@ get '/subscribe' => sub {
     template 'subscribe.tt', { user => session('mobile_user'), groupMap => $groupMap, countMap => $countMap };
 };
 
+get '/subSetting' => sub {
+    my $allBiz = Alarm::GetAllBiz();
+    template 'subSetting.tt', { Biz => $allBiz }; 
+};
+
 get '/mesgDetail' => sub {
     my %param = %{request->params};
     my $message;
@@ -122,7 +135,16 @@ get '/mesgDetail' => sub {
     } else {
         $message = Alarm::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'head', 100 );
     }
-    template 'mesgDetail.tt', { mesgs => $message, count => scalar @$message, hermes => $param{id}, oldview => $param{type} eq 'old' ? 1 : 0 };
+
+    $param{id} =~ s/</&lt;/g; $param{id} =~ s/>/&gt;/g;
+    $param{id} =~ s/[(|)|=]//g;
+
+
+    if (session('view') eq 'desktop') {
+        template 'mesgDetail_desktop.tt', { mesgs => $message, count => scalar @$message, hermes => $param{id}, oldview => $param{type} eq 'old' ? 1 : 0 };
+    } else {
+        template 'mesgDetail.tt', { mesgs => $message, count => scalar @$message, hermes => $param{id}, oldview => $param{type} eq 'old' ? 1 : 0 };
+    }
 };
 
 get '/profile' => sub {
@@ -149,18 +171,17 @@ get '/profile' => sub {
     $options{stopAlarm}  = $notifyInfo->{stopAlarm} eq 'off' ? 1 : 0;
     $options{fullFormat} = $notifyInfo->{fullFormat} eq 'on' ? 1 : 0;
 
-    $options{method}  = '';
-    $options{account} = '';
-
-    if ( $notifyInfo->{repMethod} =~ m/^(.+)-(.+)$/ ){
-        $options{method} = $1;
-        $options{account} = $2;    
-    }
+    map {
+        if ( $_ =~ m/^(.+?)-(.+)/ ) {
+            $options{$1} = $2 unless exists $options{$1};
+        }
+    } split ( /:/,
+      Encode::decode_utf8(uri_unescape($notifyInfo->{repMethod})));
 
     template 'profile.tt', \%options;
 };
 
-
+############### Ajax ####################
 any ['get', 'post'] => '/ajaxBookSubscribe' => sub {
     return to_json({ response => 'No Content' }) unless session('mobile_user');    
 
@@ -172,8 +193,14 @@ any ['get', 'post'] => '/ajaxBookSubscribe' => sub {
 any ['get', 'post'] => '/ajaxGetMessageGroup' => sub {
     return to_json({ response => 'No Content' }) unless session('mobile_user');    
 
-    my $mesges = Alarm::GetMessageGroup( session('mobile_user') );
-    to_json({ mesgGrp => $mesges });
+    my $type = request->params->{type};
+    my $message = Alarm::GetMessageGroup(session('mobile_user'));
+
+    if ( request->params->{type} eq 'self' ) {
+        to_json({ mesgGrp => $message->[0] });
+    } else {
+        to_json({ mesgGrp => $message->[1] });
+    }
 };
 
 any ['get', 'post'] => '/ajaxGetSubDetail' => sub {
@@ -223,6 +250,14 @@ any ['get', 'post'] => '/ajaxSetFilterMessage' => sub {
     to_json({ response => $response });
 };
 
+any ['get', 'post'] => '/ajaxDelFilterMessage' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my %param = %{request->params};
+    my $response = Alarm::DelFilterMessage( session('mobile_user'), $param{name}, $param{node} );
+    to_json({ response => $response });
+};
+
 any ['get', 'post'] => '/ajaxSetAlarm' => sub {
     return to_json({ response => 'No Content' }) unless session('mobile_user');
 
@@ -250,10 +285,39 @@ any ['get', 'post'] => '/ajaxSetMethod' => sub {
 any ['get', 'post'] => '/ajaxTriggerTest' => sub {
     return to_json({ response => 'No Content' }) unless session('mobile_user');
 
-    my %param = %{request->params};
     my $response = Alarm::TriggerNotifyTest(session('mobile_user'));
     to_json({ response => $response });
 };
+
+any ['get', 'post'] => '/ajaxGetRecords' => sub {
+    return to_json({ response => 'No Content' }) unless session('mobile_user');
+
+    my $response = Alarm::GetRecords( request->params->{hermes} );
+    to_json({ response => $response });
+};
+
+any ['get', 'post'] => '/ajaxGetTasks' => sub {
+    my $response = Alarm::GetTasks(request->params->{s}, request->params->{e});
+    to_json( {response => $response} );
+};
+
+any ['get', 'post'] => '/ajaxGetFilterItems' => sub {
+    my $response = Alarm::GetFilterItems(session('mobile_user'));
+    to_json( {response => $response} );
+};
+
+############## Functions ################
+sub renderGlance {
+    my $mesgGroup = Alarm::GetMessageGroup(session('mobile_user'));
+
+    template 'glance.tt', { 
+        user => session('mobile_user'),
+        selfMesgGroup => $mesgGroup->[0], 
+        oncallMesgGroup => $mesgGroup->[1],
+        isOncall => $mesgGroup->[2]
+    };
+};
+
 
 true;
 

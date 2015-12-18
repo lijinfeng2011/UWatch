@@ -1,5 +1,6 @@
 <div data-role="page" id="pageSubscribe" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
+    <a href="/subSetting" data-rel="dialog" data-icon="star" class="ui-btn-left">设置</a>
     <h1>订阅监控</h1>
     <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
   </div>
@@ -48,32 +49,13 @@
     </div>
   </div>
 
-  <style type="text/css">
-    .ui-listview>.ui-li-static {
-       padding: .1em .3em;
-    } 
-    .ui-collapsible-inset {
-       margin: .2em 0;
-    }
-    .ui-collapsible-content {
-       padding: .1em .5em;
-    }
-
-    p.alias {
-        color: #777;
-    }
-    @media (min-width: 35em) {
-        p.alias{
-           display: inline !important;
-        }
-    }    
-
-  </style>
-
   <script>
     var refresh_done = 0;
     $(document).on('pageshow', '#pageSubscribe', function() {
         setTimeout( appendContent, 200 ); 
+    });
+    $(document).on('pagebeforehide', '#pageSubscribe', function() {
+        Panel.closeSMT();
     });
 
     function appendContent() {
@@ -117,15 +99,14 @@
                 ajaxGetSubDetail( $curEle );
             },
             collapse: function(event, ui) {
-                $(event.target).find('.subscribe-box').remove();               
+                $(event.target).find('.subscribe-box').remove();
+                Panel.closeSMT();
             }
         });
     }
   </script>
 
-
-  <script src="/javascripts/subscribe.js"></script>
-
+  <script src="/javascripts/subscribe.min.js"></script>
 
 </div>
 

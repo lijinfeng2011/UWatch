@@ -1,37 +1,58 @@
 var $page = null;
+var Panel = null;
 
 $(document).on('pageinit', function() {
-    if ( $('#go-top').length ) {
+    if ($('#go-top').length) {
         $('#go-top').hide();
-        return;
+    } else {
+        Panel = new GoTop();
+        Panel.init({
+            pageWidth: $(window).width(),
+            topNodeId: 'go-top',
+            smtNodeId: 'smt-form',
+            nodeWidth: 50,
+            distanceToBottom: 125,
+            hideRegionHeight: 130,
+            distanceToPage: 20,
+            zIndex: 100,
+            text: ' '});
     }
-
-    ( new GoTop() ).init({
-        pageWidth: $(window).width(),
-        nodeId: 'go-top',
-        nodeWidth: 50,
-        distanceToBottom: 125,
-        hideRegionHeight: 130,
-        distanceToPage: 20,
-        zIndex: 100,
-        text: ' '});
 });
     
 $(document).on('pagebeforeshow', function() {
-    window.history.replaceState(null, null, '/'); 
+    if ( typeof window.history.replaceState === 'function' ) {
+        window.history.replaceState(null, null, '/'); 
+    }
 });
 
 $(document).on('pageload', function() {
     setTimeout(function(){ $page.trigger('click'); }, 1500);
 });
 
+$(document).on('pageshow', '#mesgDetail', function() {
+    createGraphy();
+});
+
+$(document).on('pageshow', '#pageHomepage', function() {
+    if( $('#pageGlance').length ) $('#pageGlance').remove(); 
+});
+
+$(document).on('pageshow', '#pageGlance', function() {
+    if( $('#pageHomepage').length ) $('#pageHomepage').remove(); 
+});
+
 $(document).on("pagecreate", function(e) {
     $page = $(e.target);
     var pageId = $page.attr('id');
-    if ( pageId != 'mesgDetail' ) {
+    if ( pageId == 'mesgDetail' ) {
+    } else {
         createFooter($page,pageId);
         pageRefresh();
     }
+});
+
+$(document).on('click', '#following-dialog .ui-icon-delete', function(event){
+    $(this).attr('href', '/profile');
 });
 
 function pageRefresh(){
@@ -114,7 +135,7 @@ function showLoader() {
 function hideLoader() { $.mobile.loading('hide'); }
 
 function popOver(content, callback) {
-    $('<div data-role="popup" id="popupDialog" data-confirmed="yes" data-transition="pop" data-overlay-theme="a" data-theme="a" style="width:18em"><div data-role="header" data-theme="b"><h1>亲!</h1></div><div role="main" class="ui-content"><h3 class="ui-title">' + content + '</h3></div></div>').appendTo($.mobile.pageContainer);
+    $('<div data-role="popup" id="popupDialog" data-confirmed="yes" data-transition="pop" data-overlay-theme="a" data-theme="a" class="g-popover"><div data-role="header" data-theme="b"><h1>亲!</h1></div><div role="main" class="ui-content"><h3 class="ui-title">' + content + '</h3></div></div>').appendTo($.mobile.pageContainer);
 
     var $popupObj = $('#popupDialog');
     $popupObj.trigger('create');
@@ -127,13 +148,13 @@ function popOver(content, callback) {
             if (isConfirmed && callback) { callback(); }  
         } });
     $popupObj.popup('open');
-    setTimeout(function(){$popupObj.popup('close');}, 1200);
+    setTimeout(function(){$popupObj.popup('close');}, 1500);
 }
 
 function sendAjaxRequest( Opt ) {
     $.ajax({
         async:       true,
-        timeout:     3000,
+        timeout:     5000,
         type:        'post',  
         url :        Opt['url'],
         dataType:    'json',
@@ -141,7 +162,12 @@ function sendAjaxRequest( Opt ) {
         beforeSend:  function()     { Opt['before']();      },
         success:     function(data) { Opt['success'](data); },
         complete:    function()     { Opt['complete']();    },  
-        error:       function(XMLHttpRequest, textStatus, errorThrown){ alert(textStatus); Opt['error'](); }
+        error:       function(XMLHttpRequest, textStatus, errorThrown){ 
+                         if (textStatus === "timeout" ) {
+                             popOver('连接超时，稍后再试下嘛！');
+                         }
+                         Opt['error'](); 
+                     }
     });
 }
 
@@ -151,3 +177,108 @@ function ajax_success(data) {
 }
 
 function ajax_error() { popOver('链路失败，稍后再试下嘛！'); }
+
+function showGraphy(data) {
+    var value = [],
+        tmpArray = [],
+        stringTime,
+        content = data.response,
+        myDate = new Date(),
+        micTime = myDate.getTime();
+
+    if ( content.length ) {
+        tmpArray = data.response.split("\n");
+        var index = tmpArray.length - 1;
+        var key = [];
+        var maxY = 0;
+
+        for (var count = 0; count < 1440; count++) {
+            var mTime = micTime - count * 1000 * 60;
+            var newDate = new Date( mTime );
+            var newMonth = newDate.getMonth() + 1;
+            var stringTime = newDate.getFullYear() + '-' + newMonth + '-' + newDate.getDate() + '-' + newDate.getHours() + '-' + newDate.getMinutes();
+            
+            key = index >= 0 ? tmpArray[index].split(':') : [];
+            var curIndex = 1440 - count;
+            if ( key.length == 2 && stringTime == key[0]) {
+                index--;
+                value.push([curIndex, key[1]]);
+                if ( parseInt(key[1]) > parseInt(maxY) ) maxY = key[1];
+            } else {
+                value.push([curIndex, 0]);
+            } 
+        }
+    }
+
+    var y_max = maxY > 0 ? maxY : 2;
+    var baseTime = micTime - 1440 * 1000 * 60;
+
+    var timeTickFormatter = function (format, val) {  
+        if (typeof val == 'number') {  
+            if ( (""+val).indexOf(".") === -1 ) {
+                var curTime = new Date(baseTime + val*60*1000);
+                return curTime.getDate() + '-' + curTime.getHours() + ':' + curTime.getMinutes();
+            }  
+            return "";  
+        }  
+        else {  
+            return String(val);  
+        }  
+    }; 
+   
+    var y_array=[0];
+    for (var id=1; id<11; id++) {
+        y_array.push(parseInt(y_max*id/10));
+    }
+
+    y_array.push(Math.ceil(y_max * 1.05));
+
+    var opt = {
+        axes: {
+            xaxis: { 
+                min: 0, 
+                max: 1440,
+                pad: 1.0,
+                tickOptions: { formatter: timeTickFormatter }  
+            },
+            yaxis: { 
+                min: 0,
+              //  max: Math.ceil(y_max),
+                ticks: y_array, 
+            },
+        },
+        seriesDefaults: {
+            showMarker: false,
+            lineWidth: 0.5,
+            shadowOffset: 1,
+        },
+        title: {
+            text: '24小时内报警分布图',
+            show: true,
+        },
+    }; 
+
+    $.jqplot('plotChart', [value.reverse()], opt);
+}
+
+function createGraphy() {
+    var hermesName = $('.hermesName').text();
+
+    var ajaxOpt = {
+        url: encodeURI("/ajaxGetRecords?hermes=" + hermesName),
+        before: function(){},
+        success: showGraphy,
+        complete: function(){},
+        error: function(){}
+    };
+
+    sendAjaxRequest( ajaxOpt );
+}
+
+function submitSubForm(target) {
+    target.find('input[type="button"]').trigger('click');
+//    var txt = target.find('.alias').text();
+//    alert(txt);
+    
+}
+

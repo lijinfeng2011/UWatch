@@ -116,10 +116,6 @@
                         error: function(){}
                     };
 
-                    //var ajaxOpt = {
-                    //    url: '/ajaxGetMessage?type=new&id=' + $('.hermesName').text(),
-                    //    callback: pullDownAction };
-
                     unbindSwipeEvent( $('#contentList1 li') );
                     sendAjaxRequest( ajaxOpt );
                 } else if (pullUpEl.className.match('flip')) {
@@ -127,9 +123,6 @@
                     pullUpEl.querySelector('.pullUpLabel').innerHTML = '加载中...';
                     
                     var last = $("#contentList1>li:last").find('.index').text();
-                  //  var ajaxOpt = {
-                  //      url: '/ajaxGetMessage?type=old&id='+$('.hermesName').text()+'&pos='+last,
-                  //      callback: pullUpAction };
                     var ajaxOpt = {
                         url: '/ajaxGetMessage?type=old&id='+$('.hermesName').text()+'&pos='+last,
                         before: function(){},
@@ -148,6 +141,9 @@
 
     $(document).on('pagebeforeshow', '#mesgDetail', function() {
         setTimeout(loaded2, 1000); 
+        if (sessionStorage.getItem('glanceView') == 'oncall') {
+            $('#cancelBtn').attr('disabled', 'true');
+        }
     });
 
     $(document).ready(function() {
@@ -163,7 +159,7 @@
     function bindSwipeEvent( el ) {
         el.swipeDelete({
             btnTheme: 'b',
-            btnLabel: '屏蔽1天',
+            btnLabel: '屏蔽1小时',
             btnClass: 'aSwipeButton',
             click: function(e) {
                 e.preventDefault();
@@ -192,10 +188,12 @@
 
     function cancelSub( hermes ) {
         var tmp = hermes.split(/\./);
+        if (tmp.length < 2) { return;}
  
-        if ( tmp.length == 2 ) { 
-            var ajaxOpt = {
-                url: '/ajaxBookSubscribe?hermesID=' + tmp[0] + '&' + tmp[1] + '=0',
+        var hms = tmp[0];
+        var item = hermes.substring(hms.length+1, hermes.length);
+        var ajaxOpt = {
+                url: '/ajaxBookSubscribe?hermesID=' + hms + '&' + item + '=0',
                 before: showLoader,
                 success: responseCancel,
                 complete: hideLoader,
@@ -203,13 +201,12 @@
             };
 
             sendAjaxRequest( ajaxOpt );
-        }
     }
 
     function responseCancel(data) {
        if ( data.response === 1 ) { 
            popOver('Sorry，稍后再试下嘛！'); 
-       } else if ( data.response === 0 ) { 
+       } else if ( data.response === 0 || data.response === 3 ) { 
            $('#contentList1').find('li').removeClass('gary').addClass('gary');
            $('#cancelBtn').attr('disabled', 'true').text('取消成功');
            popOver('取消订阅成功了yeah～'); 
