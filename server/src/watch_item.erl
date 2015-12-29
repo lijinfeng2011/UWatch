@@ -30,6 +30,29 @@ add( ITEM ) ->
 del( ITEM ) -> watch_db:del_item( ITEM ).
 
 list() -> watch_db:list_item().
+listprefix() -> sets:to_list(sets:from_list( 
+                    lists:map( 
+                        fun(X) -> 
+                               case string:tokens(X,".") of 
+                                   [I|_] -> I;
+                                   _ -> "unkown"
+                               end
+                        end
+
+                    ,list())
+
+                )).
+listsuffix(NAME) -> 
+    lists:append(
+      lists:map(
+        fun(X) ->
+            case string:tokens(X,".") of
+              [NAME|SUF] -> [ string:join( SUF, "." ) ];
+              _ -> []
+            end
+        end
+      ,list())
+    ).
   
 setindex( ITEM, VALUE ) -> watch_db:set_item(ITEM, VALUE).
 getindex( ITEM ) -> watch_db:get_item(ITEM).

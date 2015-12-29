@@ -19,6 +19,8 @@ api(List) ->
     ["item","add",ITEM]     -> watch_item:add(ITEM), ["ok"];
     ["item","del",ITEM]     -> watch_item:del(ITEM), ["ok"];
     ["item","list"]         -> watch_item:list();
+    ["item","listprefix"]         -> watch_item:listprefix();
+    ["item","listsuffix",NAME]         -> watch_item:listsuffix(NAME);
     ["item","mesg",ITEM]    ->  watch_item:disk_log(ITEM, "mesg" );
     ["item","count",ITEM]   ->  watch_item:disk_log(ITEM, "count" );
 
