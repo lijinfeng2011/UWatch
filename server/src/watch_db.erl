@@ -492,7 +492,8 @@ get_user_info_cronos( U ) ->
 cronos_notice_store( Name,AllUser,CronosList ) ->
     watch_log:debug( "OOOO:~p ~p ~p~n", [ Name,AllUser,CronosList ] ),
     F = fun() ->
-        mnesia:delete_object( #cronos_notice2{ cronos = Name } ),
+        mnesia:delete( {cronos_notice2,Name} ),
+        %mnesia:delete_object( #cronos_notice2{ cronos = Name } ),
         lists:map(
             fun(X) -> 
                 {Level,User} = X,
