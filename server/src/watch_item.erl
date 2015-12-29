@@ -48,9 +48,9 @@ mon() ->
                       Index = watch_db:get_item(X),
                       Pid = spawn(fun() -> stored(X,MLog, CLog,queue:new(),Index,queue:new(),[]) end),
                       register( ITEM, Pid );
-                     _ -> io:format( "[ERROR] start item:~p fail~n", [X] ), watch_disk_log:close(MLog)
+                     _ -> watch_log:error( "start item:~p fail~n", [X] ), watch_disk_log:close(MLog)
                   end;
-               _ -> io:format( "[ERROR] start item:~p fail~n", [X] )
+               _ -> watch_log:error( "start item:~p fail~n", [X] )
              end;
            false -> false
          end
@@ -92,7 +92,7 @@ filter() ->
       try
         ITEM ! { filter, FilterCont }
       catch
-        error:badarg -> io:format("[ERROR] send filter to item ~p fail~n", [ItemName] )
+        error:badarg -> watch_log:error("send filter to item ~p fail~n", [ItemName] )
       end
 
     end
@@ -106,7 +106,7 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
     { "data", Data } ->
         MATCH = lists:filter(fun(X) -> re:run(Data, X) /= nomatch end, Filter),
         case length(MATCH) > 0 of
-            true -> io:format("[INFO] ~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewQ = Q;
+            true -> watch_log:info("~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewQ = Q;
             false ->
                 NewQ = queue:in(Data,Q),
                 NewIndex = Index +1,
@@ -126,7 +126,9 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
             false -> NewStat = TmpStat
         end,
         watch_db:set_stat(NAME,queue_to_stat(NewStat)),
-        case item_alarm(NAME,NewQ) of
+        %% case item_alarm(NAME,NewQ) of
+        %% case item_alarm(NAME,NewStat) of
+        case queue:len(Q) > 0 of
             true ->  watch_db:set_last("item#"++NAME,Msec);
             false -> false
         end;
@@ -140,7 +142,9 @@ queue_to_stat(Q) ->
 queue_avg(Q,Count) ->
   case queue_sum(Q,Count) of
     error -> "_";
-    V -> integer_to_list( round( V/Count ) )
+%    V -> integer_to_list( round( V/Count ) )
+    V ->  CC = round(V/Count*100), 
+          integer_to_list( trunc(CC/100) ) ++ "." ++ integer_to_list( CC rem 100 )
   end.
 
 queue_sum(Q,Count) -> queue_sum(Q,Count,0).

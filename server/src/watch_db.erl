@@ -27,12 +27,13 @@
 start() ->
     mnesia:start(),
     mnesia:wait_for_tables(
-        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,filter,token,notify,detail3,admin,broken,method,notify_level,remark,cronos,cronos_notice2]
+        [item,user,relate,follow,userindex,userindex4notify,stat,last,alarm,
+         filter,token,notify,detail3,admin,broken,method,notify_level,remark,cronos,cronos_notice2]
     ,20000).
 
 init() ->
     NodeList = [node()],
-    io:format("[INFO] mnesia Node ~p~n", NodeList ),
+    watch_log:info("mnesia Node ~p~n", NodeList ),
     mnesia:create_schema(NodeList),
     mnesia:start(),
     mnesia:create_table(item,[{attributes,record_info(fields,item)},{disc_copies, NodeList} ]),
@@ -489,14 +490,14 @@ get_user_info_cronos( U ) ->
 %    mnesia:transaction(F).
 %
 cronos_notice_store( Name,AllUser,CronosList ) ->
-    io:format( "OOOO:~p ~p ~p~n", [ Name,AllUser,CronosList ] ),
+    watch_log:debug( "OOOO:~p ~p ~p~n", [ Name,AllUser,CronosList ] ),
     F = fun() ->
         mnesia:delete_object( #cronos_notice2{ cronos = Name } ),
         lists:map(
             fun(X) -> 
                 {Level,User} = X,
                 Row = #cronos_notice2{cronos = Name,user = User,level=Level},
-                io:format( "OOOO11:~p~p~p~n", [ Name,User,Level] ),
+                watch_log:debug( "OOOO11:~p~p~p~n", [ Name,User,Level] ),
                 mnesia:write(Row)
             end
         ,CronosList),
@@ -505,7 +506,7 @@ cronos_notice_store( Name,AllUser,CronosList ) ->
                 case lists:keyfind(X,2,CronosList) of
                     false -> 
                         Row = #cronos_notice2{cronos = Name,user = X,level="u0"},
-                        io:format( "OOOO22:~p~p~p~n", [ Name,X,"u0"] ),
+                        watch_log:debug( "OOOO22:~p~p~p~n", [ Name,X,"u0"] ),
                         mnesia:write(Row);
                     _ -> true
                 end

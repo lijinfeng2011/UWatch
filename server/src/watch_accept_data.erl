@@ -13,5 +13,5 @@ input(Item,Data) ->
     try
        NAME ! { "data", Data }
     catch
-       error:badarg -> io:format( "[ERROR] input to item ~p fail.", [Item] )
+       error:badarg -> watch_log:error( "input to item ~p fail.~n", [Item] )
     end.

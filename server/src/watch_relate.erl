@@ -1,5 +1,5 @@
 -module(watch_relate).
--export([add/2,del/2,list/0,list4user/1,list4user_itemnameonly/1]).
+-export([add/2,del/2,list/0,list4user/1,list4userdetail/1,list4user_itemnameonly/1]).
 
 add( ITEM, USER ) ->
   watch_db:add_relate(ITEM, USER),

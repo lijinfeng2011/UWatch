@@ -11,10 +11,10 @@ start() ->
 mon() ->
   case whereis( notify_stored ) =:= undefined of
       true ->
-          case watch_disk_log:open( ?NOTIFY_PATH, ?NOTIFY_DATA_SIZE, ?NOTIFY_DATA_COUNT) of
+          case watch_disk_log:open(?NOTIFY_PATH, ?NOTIFY_DATA_SIZE, ?NOTIFY_DATA_COUNT) of
 
-            {ok, NotifyLog} -> 
-               Pid = spawn(  fun() -> stored( NotifyLog ) end ),
+            {ok,Log} -> 
+               Pid = spawn(fun() -> stored(Log) end),
                register( notify_stored, Pid );
             _ -> false
 
@@ -30,128 +30,134 @@ stored(Log) ->
     { Data } ->
       {{Y,M,D},{H,Mi,S}} = calendar:local_time(),
       TIME = lists:concat( [ Y,"-",M,"-",D,"-",H,"-",Mi, "-", S ] ),
-      disk_log:log( Log, TIME ++ ":" ++ Data )
+      disk_log:log(Log, TIME ++ ":" ++ Data)
   end,
   stored(Log).
 
-notify( User, AlarmList ) ->
-    UserInfo = watch_user:getinfo(User),
-    Method = watch_method:getmethod( User ),
-
-    TONotice = lists:append(  lists:map( fun(X) -> case string:tokens(X,"-") of   [ "uwatch"| UWATCH ] -> [ string:join( UWATCH, "-" )];  _ -> []  end end, string:tokens( Method, "|" ))),
-
-    Token = watch_token:add(User),
+notify( User, List ) ->
     case watch_detail:getstat( User ) of
-        [ "on" ] -> 
-            lists:map(
+        "on" -> 
+            %% detail modle
+            Notice = lists:map(
                 fun(X) ->
-                    PubIndex = watch_item:getindex(X),
-                    PriIndex = watch_user:getindex4notify(User,X),
-                    COUNT = PubIndex - PriIndex,
-                    case COUNT > 0 of
+                    Mesg = watch_user:mesg(User,X,"curr", "head", "all","notify"),
+                    Count = length( Mesg ),
+
+                    case Count > 0 of
                         true ->
-                            ItemCountInfo = X ++ "@@@"++ watch_db:get_stat(X) ++"@@@"++ integer_to_list( COUNT ),
-                            Info = string:join( [ ItemCountInfo|watch_user:mesg(User,X,"curr", "head", "all","notify")], "@@@" ),
+
+                            case Count > 19 of
+                                true ->  Count_Mark = "more", NewMesg = lists:sublist( Mesg, 20 );
+                                false -> Count_Mark = integer_to_list( Count ), NewMesg = Mesg
+                            end,
+
+                            Info = string:join([X,watch_db:get_stat(X), Count_Mark|NewMesg],"@@@"),
                             Level =  watch_notify_level:get_s(X),
-
-                            send( User, Token, UserInfo, Info, Method, "1", Level ),
-
-                            lists:map(
-                                fun( U ) -> 
-                                    io:format( "[ERROR]TONotice to ~p~n", [U] ),
-                                    USER = list_to_atom( "user_list#"++ U ),
-                                    try 
-                                        USER ! { send, Info, "1", Level }
-                                    catch
-                                        error:badarg -> io:format( "[ERROR]TONotice to ~p~n fail", [U] )
-                                    end
-                                end, 
-                            TONotice );
-                        false -> false
+                            {Info,Level,"1"};
+                        false -> {}
                     end
                 end,
-            AlarmList);
+            List),
+            notice( User, Notice );
         _ ->
-            AlarmList2 = lists:map( 
+            ListStat = lists:map( 
                 fun(X) -> 
-                    PubIndex = watch_item:getindex(X),
-                    PriIndex = watch_user:getindex4notify(User,X),
-                    watch_user:setindex4notify(User,X,PubIndex),
-                    Count = PubIndex - PriIndex,
+                    Count = length(watch_user:mesg(User,X,"curr", "head", "all","notify")),
                     { X ++ ":"++ watch_db:get_stat(X) ++":"++ integer_to_list( Count ), Count , X }
                 end, 
-            AlarmList),
+            List),
 
-            NotifyItem = lists:filter( fun(X) -> {_,C,_} = X, C > 0 end, AlarmList2 ),
-            
-            NotifyItem2 = lists:map( fun(X) -> {_,_,I} = X, I end, NotifyItem),
-            AlarmList3 = lists:map( fun(X) -> {N,_,_} = X, N end, NotifyItem),
-            case length( AlarmList3 ) > 0 of
+            NotifyItem = lists:filter(fun(X) -> {_,C,_} = X, C > 0 end, ListStat),
+            AlarmList  = lists:map(   fun(X) -> {N,_,_} = X, N end, NotifyItem  ),
+
+            case length( AlarmList ) > 0 of
                 true -> 
-                    Info = string:join( AlarmList3, "@@@" ),
-                    MaxLevel =  watch_notify_level:get_max_s( NotifyItem2 ),
-                    io:format( "NotifLevel:~p~n", [ NotifyItem2 ] ),
-                    io:format( "NotifLevel:~p~n", [ MaxLevel ] ),
-                    send( User, Token, UserInfo, Info, Method, "0", MaxLevel ),
-
-                    lists:map(
-                       fun( U ) ->
-                           io:format( "[ERROR]TONotice to ~p~n", [U] ),
-                           USER = list_to_atom( "user_list#"++ U ),
-                           try
-                               USER ! { send, Info, "0", MaxLevel }
-                           catch
-                               error:badarg -> io:format( "[ERROR]TONotice to ~p~n fail", [U] )
-                           end
-                       end,
-                   TONotice );
+                    MaxLevel =  watch_notify_level:get_max_s(lists:map( fun(X) -> {_,_,I} = X, I end, NotifyItem)),
+                    notice(User, [{string:join( AlarmList, "@@@" ),MaxLevel,"0"}]);
                 false -> false
             end
     end.
 
-notify( User ) -> notice( User, "uwatch test 测试" ).
+%% Do，Done, Type = notify or notice Mesg = ItemList or SendMesg
+forward(Do,Done,Owner,Type,Mesg) -> forward(Do,Done,Owner,Type,Mesg, 0).
+forward(Do,Done,Owner,Type,Mesg,C) ->
+    case Do of
+        [User|NewDo] ->
+            case lists:member(User,Done) of
+                true  -> forward(NewDo,Done,Owner,Type,Mesg);
+                false ->
+                    case Owner == User of
+                        true -> skip;
+                        false ->
+                            USER = list_to_atom( "user_list#"++ User ),
+                            try 
+                                USER ! { Type, Mesg }
+                            catch
+                                error:badarg -> watch_log:error("forward mesg to ~p fail~n", [User] )
+                            end
+                    end,
+                   
+                    FORWARD = lists:append(
+                        lists:map(
+                            fun(X) ->
+                                watch_log:debug( "watch_notify:forward1 ~p:~p~n", [User,X]),
+                                case string:tokens(X,"-") of
+                                    ["uwatch"|UWATCH] -> [string:join( UWATCH, "-" )];
+                                     _ -> []
+                                end
+                            end,
+                            string:tokens( watch_method:getmethod( User ), ":" ))),
+                     
+                     watch_log:debug( "watch_notify:forward2 ~p~n", [FORWARD]),
+                     case C > 5 of
+                         true -> false;
+                         false -> forward(sets:to_list(sets:from_list(lists:append(NewDo,FORWARD))),[[User]++Done],Owner,Type,Mesg,C+1)
+                     end
+            end;
+        _ -> false
+    end.
 
+notify( User ) -> notice( User, [ { "uwatch test 测试", "2", "1" } ] ).
+%% User = username, Mesg = [ {Msg1,Level1,Detail1},{Msg2,Level2,Detail12} ... ],
+%% Msg1 string, Level = "0"/"1"/"2", Detail1 = "0"/"1"
 notice( User, Mesg ) ->
-    case watch_detail:getstat( User ) of
-        [ "on" ] -> Stat = "1";
-        _ -> Stat = "0"
-    end,
-    notice( User, Mesg, Stat ).
-
-notice( User, Mesg, Stat ) -> notice( User, Mesg, Stat, "2" ).
-
-notice( User, Mesg, Stat, Level ) ->
     UserInfo = watch_user:getinfo(User),
     Method = watch_method:getmethod( User ),
     Token = watch_token:add(User),
-    io:format( "[INFO] test notify for: ~p~n", [User] ),
-    io:format( "[INFO] notice ~p:~p~n", [ User, Mesg] ),
-    send( User, Token, UserInfo, Mesg, Method, Stat, Level ).
+
+    lists:map( 
+        fun(X) ->
+             case X of
+                 {M,L,D} -> send( User, Token, UserInfo, M, Method, D, L );
+                 _ -> false
+             end
+        end,
+    Mesg ).
 
 
 send( User, Token, UserInfo, Info, Method, Detail, Level ) ->
     inets:start(),
     ssl:start(),
-    io:format( "user=~p~n", [ User] ),
-    io:format( "method=~p~n", [ Method] ),
-    io:format( "token=~p~n", [ Token] ),
-    io:format( "level=~p~n", [ Level] ),
-    io:format( "userinfo=~p~n", [ UserInfo] ),
-    io:format( "etail=~p~n", [ Detail] ),
-    io:format( "info=~p~n", [ Info] ),
+    watch_log:debug( "user=~p~n",     [User]     ),
+    watch_log:debug( "method=~p~n",   [Method]   ),
+    watch_log:debug( "token=~p~n",    [Token]    ),
+    watch_log:debug( "level=~p~n",    [Level]    ),
+    watch_log:debug( "userinfo=~p~n", [UserInfo] ),
+    watch_log:debug( "etail=~p~n",    [Detail]   ),
+    watch_log:debug( "info=~p~n",     [Info]     ),
     MesgNotify = lists:concat(
-        ["user=" ,User ,"&method=",Method,"&token=",Token, "&level=",Level,
-         "&userinfo=",UserInfo, "&detail=", Detail,"&info=",Info]
+        ["user=",     User,     "&method=", Method, "&token=", Token, "&level=", Level,
+         "&userinfo=",UserInfo, "&detail=", Detail, "&info=",  Info]
     ),
-    io:format("[INFO] notify send:~p~n", [MesgNotify]),
+    watch_log:info("notify send:~p~n", [MesgNotify]),
     case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
       [],"application/x-www-form-urlencoded", MesgNotify },[],[]
       ) of
       {ok, {_,_,Body}}-> Body, Stat = "ok";
-      {error, Reason}->io:format("[ERROR] send fail cause ~p~n",[Reason]), Stat = "fail"
+      {error, Reason}->watch_log:error("send fail cause ~p~n",[Reason]), Stat = "fail"
     end,
-    notify_stored ! { User ++ ":" ++ Info ++ ":" ++ Stat }.
+    notify_stored ! { string:join( [ User, Info, Stat ], ":" ) }.
 
 setstat(User,Stat) -> watch_db:set_notify(User,Stat).
-getstat(User) -> watch_db:get_notify(User).
-liststat() -> lists:map( fun(X) -> {N,S} =X, N++":"++S end, watch_db:list_notify()).
+getstat(User)      -> case watch_db:get_notify(User) of [T] -> T; S -> S end.
+liststat()         -> lists:map(fun(X) -> {N,S}=X, N++":"++S end, watch_db:list_notify()).

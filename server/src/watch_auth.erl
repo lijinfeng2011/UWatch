@@ -8,6 +8,6 @@ check_ip( IP ) ->
     { ok, IPLIST } ->
       lists:member(IP, IPLIST);
     { error } ->
-      io:format("[ERROR] load config fail.~n" ),
+      watch_log:error("load config fail.~n" ),
       false
   end.

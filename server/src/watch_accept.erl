@@ -11,7 +11,7 @@ start(Port) ->
   register(accept_filter,P),
 
   {ok, LSocket} = gen_tcp:listen(Port, ?TCP_OPTIONS),
-  io:format("[INFO] server listen: ~w~n", [Port]),
+  watch_log:info("server listen: ~w~n", [Port]),
   do_accept(LSocket).
 
 do_accept(LSocket) ->
@@ -23,14 +23,15 @@ do_accept(LSocket) ->
           end,
           case watch_auth:check_ip( IP_Address ) of
             true -> 
-              io:format("[INFO] accept:~p~n", [ IP_Address ] ),
+              watch_log:info("accept:~p~n", [ IP_Address ] ),
+              
               spawn(fun() -> handle_client(Socket) end);
             false ->
-              io:format("[WARM] deny: ~p~n", [ IP_Address ] ),
+              watch_log:warn("deny: ~p~n", [ IP_Address ] ),
               gen_tcp:send( Socket, "deny" ),
               gen_tcp:close( Socket )
        end;
-       {error, Reason} -> io:format( "[ERROR] accept fail ~p~n", Reason )
+       {error, Reason} -> watch_log:error( "accept fail ~p~n", Reason )
    end,
    do_accept(LSocket).
 
@@ -40,12 +41,12 @@ handle_client(Socket) ->
         gen_tcp:send( Socket, "data modle" ),
         handle_item(Socket);
     {ok, Data} ->
-         io:format( "[API] ~p~n", [ Data ] ),
+         watch_log:info( "[API] ~p~n", [ Data ] ),
          [_,DATA|_] = string:tokens( Data, " " ),
          gen_tcp:send( Socket, watch_api:call( string:tokens( DATA, "/" ) )),
          gen_tcp:close( Socket );
     {error, closed} ->
-      io:format( "[ERROR] register fail" )
+      watch_log:error( "register fail" )
   end.
 
 handle_item( Socket ) ->
@@ -53,7 +54,7 @@ handle_item( Socket ) ->
     {ok, Data} ->
        lists:map( fun(X) -> accept_manager ! { data, X} end, string:tokens( Data, "\n" ) ),
        handle_item( Socket );
-    {error, closed} -> io:format( "close~n" ), gen_tcp:close( Socket )
+    {error, closed} -> watch_log:info( "close~n" ), gen_tcp:close( Socket )
   end.
 
 filter() ->
@@ -63,7 +64,7 @@ filter() ->
   try
     accept_manager ! { filter, L }
   catch
-    error:badarg -> io:format( "[ERROR] send filter to main fail~n" )
+    error:badarg -> watch_log:error( "send filter to main fail~n" )
   end,
   timer:sleep(5000),
   filter().
@@ -71,7 +72,7 @@ filter() ->
 manage(Filter) ->
   receive
     { filter, List } -> 
-        io:format( "[INFO] main filter is change~n" ),
+        watch_log:info( "main filter is change~n" ),
         manage( List );
     { data, Data } ->
       DATA = string:tokens(Data,"#"),
@@ -83,7 +84,7 @@ manage(Filter) ->
                   DD = string:join(D,"#"),
                   MATCH = lists:filter(fun(X) -> re:run(DD, X) /= nomatch end, Filter),
                   case length( MATCH ) > 0 of
-                    true -> io:format("[INFO] main filter:~p~n",[DD] );
+                    true -> watch_log:info("main filter:~p~n",[DD] );
                     false ->
                       NAME = list_to_atom( "item_list#"++ ITEM ),
                       try

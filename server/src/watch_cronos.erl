@@ -155,20 +155,18 @@ mon() ->
 
 chk() ->
     Time = watch_misc:seconds(),
-    io:format( "AAA BBB:~n" ),
     lists:map( 
         fun(X) -> 
             CRONOS = list_to_atom( "cronos#"++ X ),
-%            case whereis( CRONOS ) =:= undefined of
-%                true -> true;
-%                false -> 
-                  io:format( "AAA:~p~n", [ X ] ),
+            case whereis( CRONOS ) =:= undefined of
+                true -> true;
+                false -> 
                   try
                     CRONOS ! { notice, Time }
                   catch
-                    error:badarg -> io:format( "[ERROR]cronos chk notice user ~p fail.~n", [X] )
+                    error:badarg -> watch_log:error( "cronos chk notice user ~p fail.~n", [X] )
                   end
-%            end
+            end
         end,
     list()),
     timer:sleep( 120000 ),
@@ -182,8 +180,8 @@ stored(Name,Q, AllUser, CronosList ) ->
                 false -> NewQ = queue:in( List, Q)
             end,
             UserList = search_user(Name,NewQ,List),
-            io:format("[INFO] cronos L ~p: ~p~n", [Name,UserList]),
-            io:format("[INFO] cronos Q ~p: ~p~n", [Name,queue:to_list(NewQ)]),
+            watch_log:debug("cronos L ~p: ~p~n", [Name,UserList]),
+            watch_log:debug("cronos Q ~p: ~p~n", [Name,queue:to_list(NewQ)]),
 
             lists:map( 
                  fun(X) -> 
@@ -192,7 +190,7 @@ stored(Name,Q, AllUser, CronosList ) ->
                      try
                          UserStored ! { notify, AlarmList }
                      catch
-                         error:badarg -> io:format( "[ERROR]cronos notify user ~p fail.~n", [X] )
+                         error:badarg -> watch_log:error( "cronos notify user ~p fail.~n", [X] )
                      end
                  end
             ,UserList ),
@@ -212,7 +210,7 @@ stored(Name,Q, AllUser, CronosList ) ->
                            getnow2(Time,Start,Keep,U,Mark)
                        end,
                     [{"u1",U1}, {"u2",U2},{"u3",U3},{"u4",U4},{"u5",U5}] )),
-                    io:format( "cronos XXXX:~p  ~p  ~p~n", [ Name, NewAllUser, NewCronosList ] ),
+                    watch_log:debug( "cronos X:~p  ~p  ~p~n", [ Name, NewAllUser, NewCronosList ] ),
 
                     case {AllUser, CronosList} =:= { NewAllUser, NewCronosList } of
                        true -> true;
@@ -228,10 +226,10 @@ stored(Name,Q, AllUser, CronosList ) ->
                                fun(X) -> 
                                    USER = list_to_atom( "user_list#" ++ X ),
                                    try 
-                                       USER ! { notice, NoticeInfo },
-                                       io:format( "[INFO] notice cronos to ~p => ~p~n", [Name, USER]  )
+                                       USER ! { notice, NoticeInfo, "1", "2", [] },
+                                       watch_log:info( "notice cronos to ~p => ~p~n", [Name, USER]  )
                                    catch
-                                       error:badarg -> io:format( "[ERROR] notice cronos to ~p => ~p fail.~n", [Name, USER] )
+                                       error:badarg -> watch_log:error( "notice cronos to ~p => ~p fail.~n", [Name, USER] )
                                    end
                                end, 
                            NewAllUser)
@@ -276,7 +274,7 @@ search_user_from_u(Q,Start,Keep,U,Time,AlarmList) ->
     end.
 
 search_user_from_u(Start,Keep,List,Time) ->
-    io:format( "cronos time:~p start:~p keep:~p len:~p~n",
+    watch_log:debug( "cronos time:~p start:~p keep:~p len:~p~n",
         [ integer_to_list(Time), integer_to_list(Start),
           integer_to_list(Keep), integer_to_list(length(List))
         ]),
@@ -285,7 +283,7 @@ search_user_from_u(Start,Keep,List,Time) ->
         false ->
 
             ID = ( trunc( ( Time - Start ) div Keep) rem length(List) ) +1,
-            io:format( "cronos id:~p~n", [integer_to_list(ID)]),
+            watch_log:debug( "cronos id:~p~n", [integer_to_list(ID)]),
             lists:nth(ID,List)
     end.
 

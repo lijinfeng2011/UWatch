@@ -12,8 +12,9 @@ api(List) ->
   case List of
     ["relate","add",ITEM,USER] -> lists:foreach( fun(X) -> watch_relate:add(X,USER) end,string:tokens( ITEM, ":" ) ), ["ok"];
     ["relate","del",ITEM,USER] -> lists:foreach( fun(X) -> watch_relate:del(X,USER) end,string:tokens( ITEM, ":" ) ),["ok"];
-    ["relate","list"] -> lists:map( fun(X) -> {I,U} = X, I++ ":" ++ U end,watch_relate:list());
+    ["relate","list"] -> lists:map( fun(X) -> string:join(tuple_to_list(X),":") end,watch_relate:list());
     ["relate","list4user",USER]  ->  watch_relate:list4user(USER);
+    ["relate","list4userdetail",USER]  ->  watch_relate:list4userdetail(USER);
 
     ["item","add",ITEM]     -> watch_item:add(ITEM), ["ok"];
     ["item","del",ITEM]     -> watch_item:del(ITEM), ["ok"];
@@ -25,6 +26,7 @@ api(List) ->
     ["user","del", USER]         -> watch_user:del(USER), ["ok"];
     ["user","list"]              -> watch_user:list();
     ["user","listinfo"]              -> watch_user:list_info();
+    ["user","settable",TABLE]              -> watch_user:set_table(TABLE);
     ["user","listtable"]              -> watch_user:list_table();
     ["user","mesg",USER,ITEM]    -> watch_user:mesg(USER,ITEM);
     ["user","mesg",USER,ITEM,From,Type, Limit]    ->  watch_user:mesg(USER,ITEM,From, Type, Limit);
@@ -55,9 +57,9 @@ api(List) ->
     ["filter","del",NAME,CONT] -> lists:foreach( fun(X) -> watch_filter:del(NAME,X) end,string:tokens( CONT, ":" ) ),["ok"];
     ["filter","list"] ->lists:map( fun(X) -> {N,C} = X, N++ ":" ++ C end,watch_filter:list());
     ["filter","list4name",NAME]  -> watch_filter:list4name(NAME);
-    ["filter","table"] -> lists:map( fun(X) -> {N,C,U,T} = X, N++ ":" ++ C++":"++U++":"++integer_to_list(T) end,watch_filter:table());
+    ["filter","table"] -> lists:map( fun(X) -> {N,C,U,T} = X,string:join([N,C,U,integer_to_list(T)],":") end,watch_filter:table());
     ["token","search",TOKEN] -> [ watch_token:search(TOKEN) ];
-    ["token","list"] -> lists:map( fun(X) -> {Token,U,T} = X, Token++ ":" ++ U ++":"++integer_to_list(T) end,watch_token:list());
+    ["token","list"] -> lists:map( fun(X) -> {Token,U,T} = X, string:join([Token,U,integer_to_list(T)],":") end,watch_token:list());
 
     ["notify","setstat",USER,STAT] -> watch_notify:setstat(USER,STAT),  ["ok"];
     ["notify","getstat",USER] -> [ watch_notify:getstat(USER) ];

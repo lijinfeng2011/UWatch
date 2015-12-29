@@ -1,5 +1,5 @@
 -module(watch_user).
--export([start/0,add/2,del/1,list/0,list_info/0,auth/2,setindex/3,getindex/2,setinfo/2,getinfo/1,mesg/2,mesg/5,getinterval/1,changepwd/3,changepwd/2,list_table/0,setindex4notify/3,getindex4notify/2,mesg/6]).
+-compile(export_all).
 
 -define(INTERVAL, 60).
 -define(DEFAULT_MAX_MESG, 10000).
@@ -14,9 +14,17 @@ add(User,Passwd) ->
   end.
 
 del(User) -> watch_db:del_user(User).
+set_table(Table) -> 
+    case string:tokens(Table, ":" )  of
+        [User,Passwd|Info] ->
+            watch_db:set_user(User,Passwd,string:join(Info,":"));
+        _ -> "fail"
+    end.
+
 list() -> watch_db:list_user().
-list_info() -> lists:map( fun(X) -> {N,I} = X, N++":"++I end, watch_db:list_user_info()).
-list_table() -> lists:map( fun(X) -> {N,P,I} = X, N++":"++P++":"++I end, watch_db:list_user_table()).
+list_info() -> lists:map( fun(X) -> string:join(tuple_to_list(X),":") end, watch_db:list_user_info()).
+
+list_table() -> lists:map( fun(X) -> string:join(tuple_to_list(X),":") end, watch_db:list_user_table()).
 
 auth(User,Passwd) ->
   PASS = watch_db:get_user_passwd(User),
@@ -178,12 +186,12 @@ refresh() ->
          USER = list_to_atom( "user_list#"++ X ),
          case whereis( USER ) =:= undefined of
            true ->
-             Pid = spawn(fun() -> stored(X) end),
-             io:format("[INFO] start user:~p~n",[USER]),
+             Pid = spawn(fun() -> stored(X,[]) end),
+             watch_log:info("start user:~p~n",[USER]),
              register( USER, Pid );
            false -> USER ! { check, Time }
          end,
-         io:format("[INFO] user refresh:~p~n", [X])
+         watch_log:info("user refresh:~p~n", [X])
       end,
       watch_db:list_user()
   ),
@@ -191,23 +199,24 @@ refresh() ->
   refresh().
 
 
-stored(NAME) ->
+stored(NAME,SList) ->
   receive
     { check, Time } -> 
         UserMsec = watch_db:get_last("user#"++NAME),
         UserInterval = watch_user:getinterval(NAME),
      
+        watch_log:debug("user：~p check alarmlist00~n", [NAME]),
         case UserMsec + UserInterval * 1000 < Time of
             true ->
                 case watch_notify:getstat( NAME ) of 
-                    [ "off" ] -> io:format("[INFO] user ~p off~n",[NAME]),false;
-                     _ -> 
-                           ItemList = watch_relate:list4user_itemnameonly(NAME),
+                    "off" -> watch_log:info( "user ~p off~n",[NAME]),false;
+                     _    -> 
+                           ItemList = sets:to_list(sets:from_list(
+                                          SList++watch_relate:list4user_itemnameonly(NAME))),
                            AlarmList = lists:filter(
                                fun(X) ->
                                    TmpTime = watch_db:get_last("item#"++X),
                                    UserMsec<TmpTime
-                                   %(UserMsec<TmpTime) and (TmpTime<Time)
                                end, 
                            ItemList),
 
@@ -215,7 +224,11 @@ stored(NAME) ->
                                true ->
                                    watch_db:set_last("user#"++NAME, Time),
                                    watch_notify:notify( NAME,AlarmList),
+                                   
+                                   %% forward AlarmList
+                                   watch_notify:forward( [NAME],[],NAME,notify,AlarmList),
 
+                                   %% to cronos
                                    Cronos = list_to_atom("cronos#"++NAME),
                                    try
                                        Cronos ! { notify, AlarmList }
@@ -224,32 +237,11 @@ stored(NAME) ->
                                    end;
                                false -> false
                            end
-                end;
-            false -> fase
+                end,stored(NAME,[]);
+            false -> stored(NAME,SList)
         end;
         
-   { notify, Item } ->
-        io:format("cronos user notify11:~p~n", [NAME]),
-        io:format("cronos user notify22:~p~n", [Item]),
-        Time = watch_misc:milliseconds(),
-        watch_db:set_last("user#"++NAME, Time),
-        UserMsec = watch_db:get_last("user#"++NAME),
-        AlarmList = lists:filter(
-            fun(X) ->
-                TmpTime = watch_db:get_last("item#"++X),
-                (UserMsec< TmpTime) and ( TmpTime<Time)
-            end,
-        Item ),
-        io:format("cronos user notify33:~p~n", [AlarmList]),
-
-        case length(AlarmList) > 0 of
-             true -> watch_notify:notify( NAME,AlarmList);
-             false -> false
-        end;
-
-    { notice, Mesg } -> watch_notify:notice( NAME, Mesg, "1" );
-
-    { send, Mesg, Stat, Level } -> watch_notify:notice( NAME, Mesg, Stat, Level )
+    { notify, Item } -> stored(NAME,SList++Item),stored(NAME,[]);
+    { notice, Mesg } -> watch_notify:notice(NAME,Mesg),stored(NAME,SList)
         
-  end,
-  stored(NAME).
+  end.
