@@ -3,7 +3,7 @@
 
 start() -> spawn(fun() -> clean() end ).
 
-add(NAME,CONT,USER,TIME) -> watch_db:add_filter(NAME,CONT,USER,TIME).
+add(NAME,CONT,USER,TIME) -> del(NAME,CONT),watch_db:add_filter(NAME,CONT,USER,TIME).
 del(NAME,CONT,USER,TIME) -> watch_db:del_filter(NAME,CONT,USER,TIME).
 
 del(Name,Cont) ->
