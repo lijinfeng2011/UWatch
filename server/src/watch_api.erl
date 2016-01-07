@@ -18,6 +18,7 @@ api(List) ->
 
     ["item","add",ITEM]     -> watch_item:add(ITEM), ["ok"];
     ["item","del",ITEM]     -> watch_item:del(ITEM), ["ok"];
+    ["item","delitem4prefix",NAME]     -> watch_item:delitem4prefix(NAME);
     ["item","list"]         -> watch_item:list();
     ["item","listprefix"]         -> watch_item:listprefix();
     ["item","listsuffix",NAME]         -> watch_item:listsuffix(NAME);

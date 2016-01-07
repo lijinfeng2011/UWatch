@@ -42,6 +42,7 @@ listprefix() -> sets:to_list(sets:from_list(
                     ,list())
 
                 )).
+
 listsuffix(NAME) -> 
     lists:append(
       lists:map(
@@ -54,6 +55,18 @@ listsuffix(NAME) ->
       ,list())
     ).
   
+delitem4prefix(NAME) -> 
+    lists:append(
+      lists:map(
+        fun(X) ->
+            case string:tokens(X,".") of
+              [NAME|_] -> del( X ),[ X ];
+              _ -> []
+            end
+        end
+      ,list())
+    ).
+ 
 setindex( ITEM, VALUE ) -> watch_db:set_item(ITEM, VALUE).
 getindex( ITEM ) -> watch_db:get_item(ITEM).
 

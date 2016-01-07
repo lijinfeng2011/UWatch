@@ -241,7 +241,7 @@ stored(NAME,SList) ->
             false -> stored(NAME,SList)
         end;
         
-    { notify, Item } -> stored(NAME,SList++Item),stored(NAME,[]);
+    { notify, Item } -> stored(NAME,SList++Item);
     { notice, Mesg } -> watch_notify:notice(NAME,Mesg),stored(NAME,SList)
         
   end.

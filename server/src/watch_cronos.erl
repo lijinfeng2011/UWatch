@@ -226,7 +226,8 @@ stored(Name,Q, AllUser, CronosList ) ->
                                fun(X) -> 
                                    USER = list_to_atom( "user_list#" ++ X ),
                                    try 
-                                       USER ! { notice, NoticeInfo, "1", "2", [] },
+                                       %% Mesg = [ {Msg1,Level1,Detail1},{Msg2,Level2,Detail12} ... ]
+                                       USER ! { notice,[ {NoticeInfo, "2", "1"} ] },
                                        watch_log:info( "notice cronos to ~p => ~p~n", [Name, USER]  )
                                    catch
                                        error:badarg -> watch_log:error( "notice cronos to ~p => ~p fail.~n", [Name, USER] )
