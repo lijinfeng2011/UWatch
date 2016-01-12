@@ -40,6 +40,7 @@ api(List) ->
     ["user","auth",USER,PASS]         -> [watch_user:auth(USER,PASS)];
     ["user","changepwd",USER,OLD,NEW] -> [watch_user:changepwd(USER,OLD,NEW)];
     ["user","changepwd",USER,NEW] -> [watch_user:changepwd(USER,NEW)];
+    ["user","getnamebyphone",PHONE] -> watch_user:getnamebyphone(PHONE);
 
 
     ["follow","add",Owner,Follower] ->lists:foreach(fun(X) -> watch_follow:add(X,Follower) end,string:tokens( Owner, ":" )), ["ok"];

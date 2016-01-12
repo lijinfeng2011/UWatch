@@ -67,6 +67,8 @@ getinfo( User )        ->
     _ -> ""
   end.
 
+getnamebyphone( Phone ) -> watch_db:get_name_by_phone( Phone ).
+
 getinterval( User ) ->
   [Info] = watch_db:get_user_info(User),
   InfoList = string:tokens(Info,":"),

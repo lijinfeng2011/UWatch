@@ -138,6 +138,8 @@ list_user_info() ->
 list_user_table() ->
     do(qlc:q([{X#user.name,X#user.passwd,X#user.info} || X <- mnesia:table(user)])).
 
+get_name_by_phone(PHONE) ->
+    do(qlc:q([ X#user.name || X <- mnesia:table(user), re:run(X#user.info, PHONE) /= nomatch ])). 
 
 %% relate  ====================================================
 add_relate(Item,User) ->

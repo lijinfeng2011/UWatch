@@ -1,7 +1,7 @@
 -module(watch_log).
 -compile(export_all).
 
-level(default)   -> 3;
+level(default)   -> 4;
 
 level(debug)   -> 4;
 level(info)    -> 3;
