@@ -11,7 +11,9 @@ input(Item,Node,Data) -> input(Item,Node ++"#" ++Data).
 input(Item,Data) ->
     NAME = list_to_atom( "item_list#"++ Item ),
     try
-       NAME ! { "data", Data }
+       NAME ! { "data", Data },
+       "ok"
     catch
-       error:badarg -> watch_log:error( "input to item ~p fail.~n", [Item] )
+       error:badarg -> watch_log:error( "input to item ~p fail.~n", [Item] ),
+       "fail"
     end.

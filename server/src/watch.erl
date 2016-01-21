@@ -6,6 +6,8 @@ start(Port) ->
   watch_db:init(),
   watch_db:start(),
 
+  watch_esi:start(),
+
   watch_item:start(),
   watch_user:start(),
   watch_notify:start(),
@@ -14,4 +16,3 @@ start(Port) ->
   watch_token:start(),
   watch_cronos:start(),
   watch_accept:start(Port).
-
