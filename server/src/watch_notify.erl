@@ -109,7 +109,7 @@ forward(Do,Done,Owner,Type,Mesg,C) ->
                             string:tokens( watch_method:getmethod( User ), ":" ))),
                      
                      watch_log:debug( "watch_notify:forward2 ~p~n", [FORWARD]),
-                     case C > 16 of
+                     case C > 32 of
                          true -> false;
                          false -> forward(sets:to_list(sets:from_list(lists:append(NewDo,FORWARD))),[[User]++Done],Owner,Type,Mesg,C+1)
                      end
