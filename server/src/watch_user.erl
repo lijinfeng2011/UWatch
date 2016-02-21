@@ -192,8 +192,8 @@ refresh() ->
              watch_log:info("start user:~p~n",[USER]),
              register( USER, Pid );
            false -> USER ! { check, Time }
-         end,
-         watch_log:info("user refresh:~p~n", [X])
+         end
+         %watch_log:info("user refresh:~p~n", [X])
       end,
       watch_db:list_user()
   ),
@@ -207,7 +207,6 @@ stored(NAME,SList) ->
         UserMsec = watch_db:get_last("user#"++NAME),
         UserInterval = watch_user:getinterval(NAME),
      
-        watch_log:debug("user：~p check alarmlist00~n", [NAME]),
         case UserMsec + UserInterval * 1000 < Time of
             true ->
                 case watch_notify:getstat( NAME ) of 
@@ -222,24 +221,29 @@ stored(NAME,SList) ->
                                end, 
                            ItemList),
 
+                           %% to cronos
+                           watch_log:debug( 
+                               "user:~p  UserMsec:~p UserInterval:~p Time:~p AlarmList:~p~n",
+                                [NAME,UserMsec,UserInterval,Time,AlarmList]),
+                           Cronos = list_to_atom("cronos#"++NAME),
+                           try
+                               Cronos ! { notify, AlarmList }
+                           catch
+                               error:badarg -> false
+                           end,
+
                            case length( AlarmList ) > 0 of
                                true ->
-                                   watch_db:set_last("user#"++NAME, Time),
                                    watch_notify:notify( NAME,AlarmList),
                                    
                                    %% forward AlarmList
-                                   watch_notify:forward( [NAME],[],NAME,notify,AlarmList),
+                                   watch_notify:forward( [NAME],[],NAME,notify,AlarmList);
 
-                                   %% to cronos
-                                   Cronos = list_to_atom("cronos#"++NAME),
-                                   try
-                                       Cronos ! { notify, AlarmList }
-                                   catch
-                                       error:badarg -> false
-                                   end;
-                               false -> false
+                              false -> false
                            end
-                end,stored(NAME,[]);
+                end,
+                watch_db:set_last("user#"++NAME, Time),
+                stored(NAME,[]);
             false -> stored(NAME,SList)
         end;
         

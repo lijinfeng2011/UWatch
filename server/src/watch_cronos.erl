@@ -176,24 +176,29 @@ stored(Name,Q, AllUser, CronosList ) ->
     receive 
         { notify, List } ->
             case queue:len( Q ) > 100 of
-                true -> {_,TmpQ} = queue:out(Q), NewQ = queue:in( List, TmpQ);
-                false -> NewQ = queue:in( List, Q)
+                true -> {_,TmpQ} = queue:out_r(Q), NewQ = queue:in_r( List, TmpQ);
+                false -> NewQ = queue:in_r( List, Q)
             end,
-            UserList = search_user(Name,NewQ,List),
-            watch_log:debug("cronos L ~p: ~p~n", [Name,UserList]),
+            watch_log:debug("cronos A ~p: ~p~n", [Name,List]),
             watch_log:debug("cronos Q ~p: ~p~n", [Name,queue:to_list(NewQ)]),
 
-            lists:map( 
-                 fun(X) -> 
-                     {User,AlarmList} = X,
-                     UserStored = list_to_atom( "user_list#" ++ User ),
-                     try
-                         UserStored ! { notify, AlarmList }
-                     catch
-                         error:badarg -> watch_log:error( "cronos notify user ~p fail.~n", [X] )
-                     end
-                 end
-            ,UserList ),
+            case length( List ) > 0 of
+                true ->
+                    UserList = search_user(Name,NewQ,List),
+                    watch_log:debug("cronos L ~p: ~p~n", [Name,UserList]),
+                    lists:map( 
+                         fun(X) -> 
+                             {User,AlarmList} = X,
+                             UserStored = list_to_atom( "user_list#" ++ User ),
+                             try
+                                 UserStored ! { notify, AlarmList }
+                             catch
+                                 error:badarg -> watch_log:error( "cronos notify user ~p fail.~n", [X] )
+                             end
+                         end
+                    ,UserList );
+                false -> false
+            end,
             NewAllUser = AllUser, NewCronosList = CronosList;
           
         { notice,Time } ->
@@ -295,7 +300,7 @@ cronos_alarm(Q,Count,AlarmList) ->
   lists:filter(
       fun(X) -> 
           MATCH = lists:filter( fun(XX) -> XX == X end, List),
-          length( MATCH ) > THS
+          length( MATCH ) >= THS
       end
   ,AlarmList).
 
