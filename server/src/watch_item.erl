@@ -100,7 +100,7 @@ mon() ->
 cut() ->
   timer:sleep( 60000 ),
   {{Y,M,D},{H,Mi,_}} = calendar:local_time(),
-  Msec = watch_misc:milliseconds(),
+  Msec = watch_misc:milliseconds()+300000,
   TIME = lists:concat( [ Y,"-",M,"-",D,"-",H,"-",Mi ] ),
   lists:map( 
       fun(X) ->
