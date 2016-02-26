@@ -188,7 +188,7 @@ refresh() ->
          USER = list_to_atom( "user_list#"++ X ),
          case whereis( USER ) =:= undefined of
            true ->
-             Pid = spawn(fun() -> stored(X,[]) end),
+             Pid = spawn(fun() -> stored(X,[],0) end),
              watch_log:info("start user:~p~n",[USER]),
              register( USER, Pid );
            false -> USER ! { check, Time }
@@ -201,17 +201,19 @@ refresh() ->
   refresh().
 
 
-stored(NAME,SList) ->
+stored(NAME,SList,MARK) ->
   receive
     { check, Time } -> 
-        UserMsec = watch_db:get_last("user#"++NAME),
         UserInterval = watch_user:getinterval(NAME),
      
-        case UserMsec + UserInterval * 1000 < Time of
+        NewMARK = trunc(Time/(UserInterval*1000)),
+        case MARK /= NewMARK of
             true ->
                 case watch_notify:getstat( NAME ) of 
                     "off" -> watch_log:info( "user ~p off~n",[NAME]),false;
                      _    -> 
+
+                           UserMsec = watch_db:get_last("user#"++NAME),
                            ItemList = sets:to_list(sets:from_list(
                                           SList++watch_relate:list4user_itemnameonly(NAME))),
                            AlarmList = lists:filter(
@@ -223,8 +225,8 @@ stored(NAME,SList) ->
 
                            %% to cronos
                            watch_log:debug( 
-                               "user:~p  UserMsec:~p UserInterval:~p Time:~p AlarmList:~p~n",
-                                [NAME,UserMsec,UserInterval,Time,AlarmList]),
+                               "user:~p  UserMsec:~p UserInterval:~p Time:~p ItemList:~p AlarmList:~p~n",
+                                [NAME,UserMsec,UserInterval,Time,ItemList, AlarmList]),
                            Cronos = list_to_atom("cronos#"++NAME),
                            try
                                Cronos ! { notify, AlarmList }
@@ -234,6 +236,7 @@ stored(NAME,SList) ->
 
                            case length( AlarmList ) > 0 of
                                true ->
+                                   watch_db:set_last("user#"++NAME, Time),
                                    watch_notify:notify( NAME,AlarmList),
                                    
                                    %% forward AlarmList
@@ -242,12 +245,11 @@ stored(NAME,SList) ->
                               false -> false
                            end
                 end,
-                watch_db:set_last("user#"++NAME, Time),
-                stored(NAME,[]);
-            false -> stored(NAME,SList)
+                stored(NAME,[],NewMARK);
+            false -> stored(NAME,SList,MARK)
         end;
         
-    { notify, Item } -> stored(NAME,SList++Item);
-    { notice, Mesg } -> watch_notify:notice(NAME,Mesg),stored(NAME,SList)
+    { notify, Item } -> stored(NAME,SList++Item,MARK);
+    { notice, Mesg } -> watch_notify:notice(NAME,Mesg),stored(NAME,SList,MARK)
         
   end.
