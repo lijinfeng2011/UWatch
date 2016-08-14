@@ -82,7 +82,7 @@ mon() ->
                   case watch_disk_log:open( ?ITEM_PATH ++ X ++ "/count", ?ITEM_DATA_SIZE, ?ITEM_DATA_COUNT) of
                     {ok, CLog} ->
                       Index = watch_db:get_item(X),
-                      Pid = spawn(fun() -> stored(X,MLog, CLog,queue:new(),Index,queue:new(),[]) end),
+                      Pid = spawn(fun() -> stored(X,MLog, CLog,0,Index,queue:new(),[]) end),
                       register( ITEM, Pid );
                      _ -> watch_log:error( "start item:~p fail~n", [X] ), watch_disk_log:close(MLog)
                   end;
@@ -136,15 +136,15 @@ filter() ->
   timer:sleep(5000),
   filter().
 
-stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
+stored(NAME,MLog,CLog,Len,Index,Stat,Filter) ->
   receive
-    { filter, List } -> NewQ = Q, NewIndex = Index,NewStat = Stat, NewFilter = List;
+    { filter, List } -> NewLen = Len, NewIndex = Index,NewStat = Stat, NewFilter = List;
     { "data", Data } ->
         MATCH = lists:filter(fun(X) -> re:run(Data, X) /= nomatch end, Filter),
         case length(MATCH) > 0 of
-            true -> watch_log:info("~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewQ = Q;
+            true -> watch_log:info("~p filter:~p~n",[NAME,Data]), NewIndex = Index, NewLen = Len;
             false ->
-                NewQ = queue:in(Data,Q),
+                NewLen = Len + 1,
                 NewIndex = Index +1,
                 setindex(NAME,NewIndex),
                 watch_disk_log:write(MLog,"*"++integer_to_list(NewIndex)++"*"++Data)
@@ -153,10 +153,10 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
         NewStat = Stat,
         NewFilter = Filter;
     { cut, TIME, Msec } -> 
-        NewQ = queue:new(),
-        disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(queue:len(Q)) ),
+        NewLen = 0,
+        disk_log:log( CLog, TIME ++ ":" ++ integer_to_list(Len) ),
         NewIndex = Index,NewFilter = Filter,
-        TmpStat = queue:in(queue:len(Q),Stat),
+        TmpStat = queue:in(Len,Stat),
         case queue:len(TmpStat) > ?ITEM_MAX_QCOUNT of
             true -> {_,NewStat} = queue:out(TmpStat);
             false -> NewStat = TmpStat
@@ -164,13 +164,13 @@ stored(NAME,MLog,CLog,Q,Index,Stat,Filter) ->
         watch_db:set_stat(NAME,queue_to_stat(NewStat)),
         %% case item_alarm(NAME,NewQ) of
         %% case item_alarm(NAME,NewStat) of
-        case queue:len(Q) > 0 of
+        case Len > 0 of
             true ->  watch_db:set_last("item#"++NAME,Msec);
             false -> false
         end;
-      true -> NewQ = Q, NewIndex = Index,NewStat = Stat, NewFilter = Filter
+      true -> NewLen = Len, NewIndex = Index,NewStat = Stat, NewFilter = Filter
   end,
-  stored(NAME,MLog,CLog,NewQ,NewIndex,NewStat,NewFilter).
+  stored(NAME,MLog,CLog,NewLen,NewIndex,NewStat,NewFilter).
 
 queue_to_stat(Q) ->
    string:join(lists:map(fun(X) ->queue_avg(Q,X) end, ?STAT_TIME),"/").
