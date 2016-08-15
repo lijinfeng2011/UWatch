@@ -491,9 +491,8 @@ sub renderGlance {
 
 # CSRF Attack;
 sub validRequest {
-    return request->referer && 
-           request->referer =~ m{^http://uwatch.s.nices.net:|^http://uwatch.nices.net/} && 
-           session('mobile_user');
+    my $web_addr = config->{web_addr};
+    return request->referer && request->referer =~ m{^$web_addr} && session('mobile_user');
 };
 
 # XSS Attack;
