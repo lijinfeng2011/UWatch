@@ -2,31 +2,25 @@
 <html>
 <head>
     <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
-    <link rel="stylesheet" href="/css/glance.css">
+    <link rel="stylesheet" href="/css/glance.css?v=2.3.1">
     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0">
     <script src="/javascripts/lib/jquery.min.js"></script>
-    <script src="/javascripts/init.js"></script>
-    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.js"></script>
+    <script src="/javascripts/init.min.js"></script>
+    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.custom.js"></script>
     <script src="/javascripts/lib/jquery.md5.min.js"></script> 
-    <script src="/javascripts/lib/goTop.js"></script>
-    <script src="/javascripts/global.js"></script>
-    <script src="/javascripts/glance.js"></script>
+    <script src="/javascripts/global.min.js"></script>
+    <script src="/javascripts/glance.min.js"></script>
+    <script src="/javascripts/util/goTop.min.js?v=1"></script>
 </head>
 
 <body>
-<div data-role="page" id="pageHomepage" data-footer="static/footer.html">
+<div data-role="page" id="pageHomepage" data-dom-cache="false" data-footer="static/footer.html">
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
     <h1>报警订阅系统</h1>
     <a href="/login" data-rel="dialog" data-icon="home" class="ui-btn-right">登录</a>
   </div>
 
-  <div data-role="content">
-    <div id="Welcome" style="background-color:#fff9ea; margin-top:-15px; border-bottom: solid 1px #bac6d3;">
-      <div id="container" style="padding:20px 20px 0px 20px; text-align: center;">
-        <img src="/images/Logo.png" style="width:36px; height:36px">
-      </div>
-    </div>
-  </div>
+  <div data-role="content"> [% include welcome_box.tt %] </div>
 
   <div style="margin: 10px 20px">
      <div class="mesg-box">
@@ -34,15 +28,15 @@
            <p>登录服务器故障，请稍后再试!</p>
 [% ELSIF status == '2' %]
            <p>用户名或者密码错误，请重新登录!</p>
+[% ELSIF status == '3' %]
+           <p>蓝信登录失败，请选择其他方式登录!</p>
+[% ELSIF status == '4' %]
+           <p>如使用蓝信登录，请在报警方式中填写手机号码!</p>
+[% ELSIF status == '5' %]
+           <p>手机号码有冲突，请选择其他登录方式!</p>
 [% ELSE %]
-           <p>欢迎使用报警订阅系统!</p>
-           <p style="margin: 0.5em 0">当前版本: v0.1.1 </p>
-           <p style="margin: 0.5em 0">更新时间: 2015.11.04 </p>
-           <p style="margin: 0.5em 0">更新内容: </p>
-           <p style="margin: 0.5em 1em">
-              1. 在报警详情浏览页面，增加报警取消功能；<br>
-              2. 在个人设置页面，增加四种报警接收方式；<br>
-              3. 优化网站提示系统使之更加人性化；<br>
+           <p>
+           欢迎使用报警订阅系统!<br>
            </p>
 [% END %]
      </div> 

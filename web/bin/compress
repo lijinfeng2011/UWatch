@@ -1,0 +1,49 @@
+#!/home/s/ops/perl/bin/perl
+use warnings;
+use strict;
+
+use Encode;
+use JSON; 
+use LWP::UserAgent;
+use Data::Dumper;
+
+my $json = new JSON;
+my $ua = LWP::UserAgent->new();
+
+my $ROOT = "../public/javascripts";
+chdir $ROOT  or die "chdir to $ROOT fail.\n";
+
+my ($request, $response);
+
+for my $file (glob '*') {
+    # delete old min.js file;
+    unlink $file if $file =~ /\.min\.js$/; 
+}
+
+for my $file ( glob "*" ) {
+    next unless -f $file ;
+    next if $file =~ /\.min\.js$/; 
+
+    my $source = `cat $file`; 
+
+    $request = HTTP::Request->new('POST' => 'http://tool.oschina.net/action/jscompress/js_compress?munge=1&linebreakpos=5000');  
+    $request->content_type('application/x-www-form-urlencoded');
+    $request->header('Accept-Language' => 'zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3');
+    $request->content($source);
+
+    eval { $response = $ua->request($request) }; 
+    die 'Bad Compress' if $@ || not $response->is_success;
+
+    my $obj = $json->decode($response->content());
+    if ($file =~ /(.+)\.js$/) {
+        my $newfile = sprintf("%s.min.js", $1);
+        #system ("echo \"$obj->{result}\"  >> $newfile");
+
+        open my $f, ">>", "$newfile";
+        print $f $obj->{result};
+        close $f;
+    }
+    
+    print "finish $file \n";
+}
+

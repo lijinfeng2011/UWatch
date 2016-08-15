@@ -14,7 +14,7 @@ $(document).on('pageinit', function() {
             distanceToBottom: 125,
             hideRegionHeight: 130,
             distanceToPage: 20,
-            zIndex: 100,
+            zIndex: 1000,
             text: ' '});
     }
 });
@@ -100,6 +100,13 @@ function createFooter(page, id) {
                                             .attr('data-rel', 'dialog');
             page.find('a[data-icon="gear"]').attr('href', '/login')
                                             .attr('data-rel', 'dialog');
+        } else if (id == 'pageLoginError') {
+            page.find('a[data-icon="grid"]').attr('href', '/login')
+                                            .attr('data-rel', 'dialog');
+            page.find('a[data-icon="plus"]').attr('href', '/login')
+                                            .attr('data-rel', 'dialog');
+            page.find('a[data-icon="gear"]').attr('href', '/login')
+                                            .attr('data-rel', 'dialog');
         }
     }
 }
@@ -149,6 +156,68 @@ function popOver(content, callback) {
         } });
     $popupObj.popup('open');
     setTimeout(function(){$popupObj.popup('close');}, 1500);
+}
+
+function popConfirmation(data, callback) {
+    $('<div data-role="popup" id="popupConfirm" data-confirmed="no" data-transition="pop" data-overlay-theme="a" data-theme="a" class="g-popover"><div data-role="header" data-theme="b"><h1>确认</h1></div><div role="main" class="ui-content confirmDlg"><h3 class="ui-title">您将屏蔽包含如下信息的机器</h3></div></div>').appendTo($.mobile.pageContainer);
+
+    var $ul = $('<ul data-role="listview" style="margin-top:1em;"></ul>');
+    var els = data.nodes.split(':');
+    for ( var i in els ) {
+        $('<li>' + els[i] + '</li>').appendTo($ul);
+    }
+    $ul.appendTo('.confirmDlg');
+
+    var $btnGroup = $('<div data-role="controlgroup" data-mini="true" style="margin-top:2em">').appendTo('.confirmDlg');
+    var $btnNo = $('<button data-icon="back">取消屏蔽</button>').appendTo($btnGroup);
+    var $btnYes = $('<button data-icon="check">确认屏蔽</button>').appendTo($btnGroup);
+
+    $('<input id="filterNodes" type="hidden" value="'+ data.hermes +'">').appendTo('.confirmDlg');
+    $('<input id="filterName" type="hidden" value="'+ data.name +'">').appendTo('.confirmDlg');
+    $('<input id="filterTime" type="hidden" value="'+ data.time +'">').appendTo('.confirmDlg');
+
+    var $popupObj = $('#popupConfirm');
+    $popupObj.trigger('create');
+    $popupObj.popup({  
+        history: false,
+        afterclose: function (event, ui) {  
+            $popupObj.find(".optionConfirm").first().off('click');  
+            var isConfirmed = $popupObj.attr('data-confirmed') === 'yes' ? true : false;  
+            $(event.target).remove();  
+            if (isConfirmed && callback) { callback(); }  
+        } 
+    });
+    $popupObj.popup('open');
+
+    $btnNo.unbind('click')
+          .bind('click', function(){ $('#popupConfirm').popup('close') });
+
+    $btnYes.unbind('click')
+           .bind('click', function(){ 
+               $('#popupConfirm').popup('close');
+
+               var hName = $('#filterName').val(),
+                   hermes = $('#filterNodes').val(),
+                   hTime = $('#filterTime').val();
+
+               sendAjaxRequest({
+                   url: '/ajaxSetFilterMessageGrp?name='+hName+'&hms='+hermes+'&time='+hTime,
+                   before: function(){},
+                   complete: function(){},
+                   error: function(){},
+                   success: function( data ) {
+                       if ( data.response == 1 ) {
+                           popOver('屏蔽失败!');
+                       } else if ( data.response == 2 ) {
+                           popOver('一次不能超过20台机器!');
+                       } else if ( data.response == 3 ) {
+                           popOver('机器格式不合法!');
+                       } else {
+                           setTimeout(function(){ popOver('屏蔽成功了yeah~!');  }, 1000);
+                       }
+                   }
+               });
+           });
 }
 
 function sendAjaxRequest( Opt ) {

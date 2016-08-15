@@ -1,4 +1,4 @@
-#!/home/s/ops/perl/bin/perl
+#!/usr/bin/perl
 use Dancer;
 use Web;
 dance;

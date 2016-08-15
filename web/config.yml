@@ -49,3 +49,9 @@ plugins:
     driver: Memory 
     global: 1
 
+php_path: '/usr/bin/php'
+web_addr: 'http://uwatch.nices.net:8889'
+
+sso:
+  ref: 'http://login.nices.net:8080/?ref='
+  sid: 'http://login.nices.net:8080/info?sid='

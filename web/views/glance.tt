@@ -3,7 +3,7 @@
 <head>
     <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
     <link rel="stylesheet" href="/css/calendar.css">
-    <link rel="stylesheet" href="/css/glance.css?v=1">
+    <link rel="stylesheet" href="/css/glance.css?v=2.3.3">
     <link rel="stylesheet" href="/css/jquery.swipeButton.css" />
     <meta name="viewport" content="width=device-width, user-scalable=no, maximum-scale=1.0, initial-scale=1.0,">
     <script src="/javascripts/lib/jquery.min.js"></script>
@@ -11,10 +11,12 @@
     <script src="/javascripts/lib/jquery.mobile-1.4.3.min.custom.js"></script>
     <script src="/javascripts/lib/jquery.md5.min.js"></script>
 
-    <script src="/javascripts/global.min.js"></script>
+    <script src="/javascripts/global.js?v=2"></script>
     <script src="/javascripts/glance.min.js"></script>
-    <script src="/javascripts/util/goTop.min.js"></script>
+    <script src="/javascripts/util/goTop.min.js?v=1"></script>
     <script src="/javascripts/util/calendar.min.js"></script>
+
+    <script src="/javascripts/profile.js"></script>
 </head>
 
 <body>
@@ -34,17 +36,7 @@
   </div>
 
   <div data-role="content">
-    <div id="Welcome" style="background-color:#fff9ea; margin-top:-15px; border-bottom: solid 1px #bac6d3; " >
-      <div id="container" style="padding-top:20px;">
-         <div style="width:33%; display:inline-block;"> </div>
-         <div style="width:33%; display:inline-block; text-align:center;">
-             <img src="/images/Logo.png" style="width:36px; height:36px">
-         </div>
-         <div style="width:30%; text-align:right; display:inline-block;">
-           <span style="float:right; padding-right:5px; font-weight:700;" > 欢迎 [% user %] </span>
-         </div>
-      </div>
-    </div>
+    [% include welcome_box.tt {user => user} %]
 
     <div style="margin: 10px">
        <div class="mesg-box" style="display:none"></div>

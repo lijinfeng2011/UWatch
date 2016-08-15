@@ -145,5 +145,10 @@ GoTop.prototype = {
     closeSMT: function() {
         this.cache.openedForm = null;
         if ($('#smt-form').is(':visible')) { $('#smt-form').hide();}
+    },
+
+    getOpenedForm: function() {
+        return this.cache.openedForm;
     }
+
 };

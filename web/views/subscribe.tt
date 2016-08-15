@@ -1,22 +1,66 @@
 <div data-role="page" id="pageSubscribe" data-footer="static/footer.html">
+
+<!-- filter panel component  --!>
+  <div data-role="panel" id="filterPanel" data-swipe-close="false">
+  <!-- filter section  --!>
+    <div style="padding-top:1em;">选择要过滤的业务</div>
+    <form id="bizSetting" method="post" action="/subscribe">
+      <div data-role="fieldcontain">
+        <div class="ui-controlgroup-controls" id='bizGroup'>
+          [% FOREACH biz IN Biz %]
+            <input type="checkbox" name="[% biz %]" id="[% biz %]">
+            <label for="[% biz %]">[% biz %]</label>
+          [% END %]
+        </div>
+      </div>
+      <input type="submit" style="display:none" data-role="none">
+    </form>
+    <hr style="margin-top:1em;" size="3" color="#ddd">
+  <!-- end filter section  --!>
+
+  <!-- node to hermes section  --!>
+    <div style='padding-top:3em;'>按机器过滤</div>
+    <div>
+      <form id="nsForm"> 
+        <input type="search" name="nodeName" placeholder="输入机器名称...">
+        <ul id="nodeFilterList" data-role="listview" data-inset="true" data-split-theme="a">
+        </ul>
+        <div style="display:none" id="mbox-bizs">没有对应的业务</div>
+      </form>
+    </div> 
+  <!-- end node to hermes section  --!>
+  </div> 
+<!-- end filter panel component  --!>
+
+
+<!-- search panel component --!>
+  <div data-role="panel" id="searchPanel" data-position="right" data-display="overlay" data-swipe-close="false">
+    <div style="font-weight:bold">集群详细信息</div>
+    <div>
+      <form id="hsForm"> 
+        <input type="search" name="hermesName" placeholder="输入hermes名称...">
+        <p>集群详情:</p>
+        <p>健康指数:</p>
+        <p>集群图表:</p>
+        <ul id="diagramList" data-role="listview" data-inset="true"></ul>
+        <p>机器列表:</p>
+        <ul id="hermesFilterList" data-role="listview" data-inset="true"></ul>
+        <div style="display:none" id="mbox-bizs">没有对应的机器</div>
+      </form>
+    </div> 
+  </div> 
+<!-- emd search panel component  --!>
+
+
+<!-- create main component  --!>
   <div data-role="header" data-position="fixed" data-theme="b" data-fullscreen="true">
-    <a href="/subSetting" data-rel="dialog" data-icon="star" class="ui-btn-left">设置</a>
+    <a href="#filterPanel" data-icon="arrow-r" id="openFilterPanel" class="ui-btn-left">视图过滤</a>
     <h1>订阅监控</h1>
-    <a href="/logout" data-role="button" data-icon="back" class="ui-btn-right">注销</a>
+    <a href="#searchPanel" data-icon="arrow-l" id="openSearchPanel" class="ui-btn-right">查看详情</a>
   </div>
 
   <div data-role="content">
-    <div id="Welcome" style="background-color:#fff9ea; margin-top:-15px; border-bottom: solid 1px #bac6d3; " >
-      <div id="container" style="padding-top:20px;">
-         <div style="width:33%; display:inline-block;"> </div>
-         <div style="width:33%; display:inline-block; text-align:center;">
-             <img src="/images/Logo.png" style="width:36px; height:36px">
-         </div>
-         <div style="width:30%; text-align:right; display:inline-block;">
-           <span style="float:right; padding-right:5px; font-weight:700;" > 欢迎 [% user %] </span>
-         </div>
-      </div>
-    </div>
+    [% include welcome_box.tt {user => user} %]
 
     <div style="margin: 10px">
 [% IF error %]
@@ -52,10 +96,7 @@
   <script>
     var refresh_done = 0;
     $(document).on('pageshow', '#pageSubscribe', function() {
-        setTimeout( appendContent, 200 ); 
-    });
-    $(document).on('pagebeforehide', '#pageSubscribe', function() {
-        Panel.closeSMT();
+        setTimeout( appendContent, 20 );
     });
 
     function appendContent() {
@@ -104,9 +145,10 @@
             }
         });
     }
+
   </script>
 
-  <script src="/javascripts/subscribe.min.js"></script>
+  <script src="/javascripts/subscribe.min.js?v=2"></script>
 
 </div>
 

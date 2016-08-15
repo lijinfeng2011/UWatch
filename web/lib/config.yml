@@ -1,4 +1,4 @@
 watch_config:
   subscribe_sort: 
-    prefix: [ 'so', 'so2']
-    alias:  [ '搜索业务', 'soso', '其他业务']
+    prefix: ['safe', 'so_ad', 'so', 'mobisafe', 'beacon']
+    alias:  ['安全业务', '广告业务', '搜索业务', '手机卫士', 'beacon', '其他业务']

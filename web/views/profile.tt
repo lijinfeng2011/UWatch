@@ -5,17 +5,7 @@
   </div>
 
   <div data-role="content">
-    <div id="Welcome" style="background-color:#fff9ea; margin-top:-15px; border-bottom: solid 1px #bac6d3; " >
-      <div id="container" style="padding-top:20px;">
-         <div style="width:33%; display:inline-block;"> </div>
-         <div style="width:33%; display:inline-block; text-align:center;">
-             <img src="/images/Logo.png" style="width:36px; height:36px">
-         </div>
-         <div style="width:30%; text-align:right; display:inline-block;">
-           <span style="float:right; padding-right:5px; font-weight:700;" > 欢迎 [% user %] </span>
-         </div>
-      </div>
-    </div>
+    [% include welcome_box.tt {user => user} %]
 
     <div class="profile-wrapper">
        <div data-role="collapsible" data-name="basic-change" data-collapsed="false" data-collapsed-icon="arrow-d" data-expanded-icon="arrow-u" style="margin:20px 0">
@@ -34,7 +24,7 @@
                 <input type="text" name="oncaller" value="[% oncaller %]" placeholder="留个部门名称呗..">
              </div>
              <div data-role="fieldcontain">
-                <label for="refTime">报警间隔</label>
+                <label for="refTime">报警间隔 (单位:秒)</label>
                 <input type="range" name="refTime" value="[% refTime ? refTime : 60 %]" min="60" max="300">
              </div>
              <div data-role="fieldcontain">
@@ -103,7 +93,11 @@
          <h3 style="margin: 0;">修改密码</h3>
          <div class="pwd-change">
             <div class="change-box mesg-box" style="display:none"></div>
+[% IF skipOldPwd %]
+            <input type="password" name="old-pwd" readonly="true" placeholder="外部登录无需输入旧密码..">
+[% ELSE %]
             <input type="password" name="old-pwd" placeholder="输入旧密码..">
+[% END %]
             <input type="password" name="new-pwd" placeholder="输入新密码..">
             <input type="password" name="confirm-pwd" placeholder="再次输入新密码..">
             <input type="button" onclick="ajaxChangePWD(event)" data-theme="a" value="确定修改">

@@ -1,0 +1,13 @@
+<div id="welcome-box">
+   <div id="container">
+      <div id="welcome-left"> </div>
+      <div id="welcome-middle">
+        <img id="welcome-logo" src="/images/Logo.png">
+      </div>
+      <div id="welcome-right">
+      [% IF user %]
+        <span id="welcome-text" > 欢迎 [% user %] </span>
+      [% END %]
+      </div>
+   </div>
+</div>

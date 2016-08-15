@@ -12,15 +12,25 @@ use MIME::Base64;
 use URI::Escape;
 use Cwd;
 use FindBin qw/$Bin/;
+use Digest::MD5;
+use String::MkPasswd qw(mkpasswd );
+
+use NS::Util::OptConf;
+use NS::Hermes;
+use NS::Util::Sudo;
+use NS::Hermes::Range;
 
 my $server = 'http://127.0.0.1:9999';
 my $userAgent = LWP::UserAgent->new();
-$userAgent->timeout( 10 );
-my @allItems = ();
+$userAgent->timeout(30);
+my $imgUA = LWP::UserAgent->new();
+$imgUA->timeout(10);
 my %allAlias = ();
 my %allLevel = ();
 my @subItems = ();
 my $g_config;
+
+my $range_db;
 
 sub Login {
     my ( $user, $pwd, $response ) = @_;
@@ -32,6 +42,32 @@ sub Login {
     if    ( not $response->is_success )  { return 1; } 
     elsif ( $response->content eq 'ok')  { return 0; }
     else  { return 2; }
+}
+
+sub HasUser {
+    my $user = shift;
+#    print Dumper($user);
+    my $resp = $userAgent->get(sprintf("%s/user/list", $server));
+    return 1 unless $resp->is_success;
+
+    my %user = map{ $_ => 1 } split /\n/, $resp->content;
+    return $user{$user} ? 1 : 0;
+}
+
+sub Mkpass {
+    my $pass = mkpasswd(
+        -length => 13, -minnum => 4, -minlower => 4,
+        -minupper => 2, -minspecial => 0
+    );
+    return ( $pass, Digest::MD5->new->add($pass)->hexdigest );
+}
+
+sub AddUser {
+    my ( $user, $pwd ) = @_;
+    my $url = sprintf("%s/user/add/%s/%s", $server, $user, $pwd);
+    my $response = $userAgent->get( $url );
+
+    return $response->is_success ? 0 : 1;
 }
 
 sub GetAllUsers {
@@ -70,25 +106,16 @@ sub GetNoAlarm {
 
     my @res;
     map { push @res, $_ if $userList{$_} == 0; } keys %userList;
-
-    print Dumper(\@res);
 }
 
-sub GetAllItems {
+sub GetItemInfos {
     my $url = sprintf ( "%s/item/list", $server ); 
-    my ( $response, $items, %count );
-
-    eval { $response = $userAgent->get( $url ) };
-    return if $@ || not $response->is_success;
-
-    $items = $response->content;
-    @allItems = sort split( '\n', $items );
+    my ( $response, %count );
 
     $url = sprintf ( "%s/alias/list", $server );
     eval { $response = $userAgent->get( $url ) };
     return if $@ || not $response->is_success;
-
-    $items = $response->content; %allAlias = ();
+    my $items = $response->content; %allAlias = ();
     foreach my $key ( split ( '\n', $items ) ) {
         if ( $key =~ m/^(\w+):(.+)$/ ) {
             $allAlias{$1} = $2;
@@ -107,6 +134,28 @@ sub GetAllItems {
     }
 }
 
+sub GetPrefixItems {
+    my $url = sprintf ( "%s/item/listprefix", $server ); 
+    my $response;
+
+    eval { $response = $userAgent->get( $url ) };
+    return if $@ || not $response->is_success;
+
+    my @itemPrefix = sort split('\n', $response->content);
+    return \@itemPrefix;
+}
+
+sub GetSuffixItems {
+    my $url = sprintf ( "%s/item/listsuffix/%s", $server, shift ); 
+    my $response;
+
+    eval { $response = $userAgent->get( $url ) };
+    return if $@ || not $response->is_success;
+
+    my @itemSuffix = sort split('\n', $response->content);
+    return \@itemSuffix;
+}
+
 sub GetSubItems {
     my ( $user,  $response, $items ) = @_; @subItems = ();
     my $url = sprintf ( "%s/relate/list4user/%s", $server, $user );
@@ -121,14 +170,86 @@ sub GetSubItems {
     }
 }
 
+sub _initConf {
+    NS::Util::Sudo->sudo();
+    $range_db = NS::Hermes->new( NS::Util::OptConf->load()->dump( 'range') )->db;
+}
+
+sub GetBizbyNodes {
+    _initConf() unless $range_db;
+    my @result;
+    my @cluster = $range_db->select('name', node => [1, shift]);
+    for my $clu ( @cluster ) {
+        my ($name) = @$clu;
+        push @result, $name;
+    }
+
+    return \@result;
+}
+
+sub GetNodesbyHermes {
+    _initConf() unless $range_db;
+    my %room;
+    my @nodes = $range_db->select('attr,node,info', name => [1, shift]);
+    map {
+        $room{$_->[0]} = [] unless exists $room{$_->[0]};
+        push @{$room{$_->[0]}}, sprintf("%s (%s)", $_->[1], $_->[2]);
+    } @nodes; 
+
+    return \%room; 
+}
+
+sub GetNodeDetail {
+    my ( $node, $hermes, %list ) = ( shift );
+    _initConf() unless $range_db;
+
+    my @cluster = $range_db->select('name', node => [1, $node]);
+    for my $cluster ( @cluster ) {
+        my ( $name ) = @$cluster;
+        $hermes .= ' | ' if $hermes;
+        $hermes .= $name;
+    }
+
+    my ($oncaller, @mArray, $response);
+    my $url = sprintf ( "%s/cronos/get/now/cronos_base", $server );
+    eval { $response = $userAgent->get( $url ) };
+    unless ( $@ ) { 
+        my $items = $response->content if $response->is_success;
+        my @subItems = split('\n', $items) if $items;
+        map { $oncaller = $_; $oncaller =~ s/^u1://; } grep{ /^u1:/ } @subItems;
+    }
+
+    if ( $oncaller ) {
+        $url = sprintf ("%s/method/get/%s", $server, $oncaller);
+        eval { $response = $userAgent->get( $url ) };
+        unless ( $@ ) { 
+            my $items = $response->content if $response->is_success;
+            map {
+               if ( /^(.+?)-(.+)/ ) {
+                   push @mArray, '蓝信: '.  $2 if $1 eq 'blue';
+                   push @mArray, '短信: '.  $2 if $1 eq 'sms';
+                   push @mArray, 'QAlarm: '.$2 if $1 eq 'qalarm';
+               } 
+            }split(':', $items);
+        }
+         
+    }
+
+    $list{node} = $node;
+    $list{hermes} = $hermes;
+    $list{oncaller} = $oncaller.'('.join('|', @mArray).')';
+     
+
+    return \%list;
+}
 sub GetAllBiz {
     $g_config = eval { YAML::XS::LoadFile("$Bin/../lib/config.yml") } unless $g_config;
     return $g_config->{'watch_config'}->{'subscribe_sort'}->{alias};
 }
 
 sub GetAllAlarmItem {
-    GetAllItems();
-    return undef if $#allItems == -1;
+    GetItemInfos();
+    return undef unless %allAlias;
 
     $g_config = eval { YAML::XS::LoadFile("$Bin/../lib/config.yml") } unless $g_config;
     my %groupMap = ( rule => {} );
@@ -138,25 +259,25 @@ sub GetAllAlarmItem {
 
     map { $groupMap{rule}->{$_} = $index++; } @{$groupMap{prefix}};
 
-    foreach my $item (@allItems) {
-       my ($hms, $alm, $ismached) = split ('\.', $item);
-       next unless $hms && $alm;
+    my $items = GetPrefixItems();
 
-       my $ahms = $allAlias{$hms} ? $allAlias{$hms} : ' %E6%9A%82%E6%97%A0%E5%A4%87%E6%B3%A8';
+    foreach my $item ( @$items ) {
+       my $ismached = 0;
+       my $ahms = $allAlias{$item} ? $allAlias{$item} : ' %E6%9A%82%E6%97%A0%E5%A4%87%E6%B3%A8';
 
        foreach ( @{$groupMap{prefix}} ) {
            $reg = sprintf("^%s", $_);
-           if ( $hms =~ m/$reg/ ) {
+           if ( $item =~ m/$reg/ ) {
               $ismached = 1;
               my $id = $groupMap{rule}->{$_};
               $result{$groupMap{alias}->[$id]} = {} unless exists $result{$groupMap{alias}->[$id]};
-              $result{$groupMap{alias}->[$id]}->{$hms} = $ahms;
+              $result{$groupMap{alias}->[$id]}->{$item} = $ahms;
               last;
            }
        } 
        unless ( $ismached ) {
            $result{$groupMap{alias}->[-1]} = {} unless exists $result{$groupMap{alias}->[-1]};
-           $result{$groupMap{alias}->[-1]}->{$hms} = $ahms; 
+           $result{$groupMap{alias}->[-1]}->{$item} = $ahms; 
        }
     }
 
@@ -164,26 +285,24 @@ sub GetAllAlarmItem {
 }
 
 sub GetSubscribeDetail {
-    my ( $subID, $user, @items, @selfBooked ) = @_;
+    my ( $subPrefix, $user, @items, @selfBooked ) = @_;
 
-    GetAllItems() if ( $#allItems == -1 );
-    return if $#allItems == -1;
+    GetItemInfos() unless %allAlias;
+    return unless %allAlias;
 
     GetSubItems( $user ); 
 
-    foreach my $item ( grep { $_ =~ m/(^$subID\.)/ } @allItems ) { 
-       my @sp = split( '\.', $item, 2 );
-       next if scalar @sp < 1;
+    my $suffixItems = GetSuffixItems($subPrefix);
 
+    foreach my $item ( @$suffixItems ) { 
        @selfBooked = grep { /^myself_/ } @subItems;
       
-       my %detail = ( name => $sp[1], booked => 0, level => 2 );
-       $detail{booked} = 1 if grep (/:$item:/, @selfBooked);
-      
-       my $key = join('.', $subID, $sp[1]);
-       $detail{level} = $allLevel{$key} if $allLevel{$key};
+       my %detail = ( name => $item, booked => 0, level => 2 );
+       my $reg = join('.', $subPrefix, $item);
 
-       $detail{alias} = $allAlias{$sp[1]}?Encode::decode_utf8(uri_unescape($allAlias{$sp[1]})):'';
+       $detail{booked} = 1 if grep (/:$reg:/, @selfBooked);
+       $detail{level} = $allLevel{$reg} if $allLevel{$reg};
+       $detail{alias} = $allAlias{$item} ? Encode::decode_utf8(uri_unescape($allAlias{$item})) : '';
 
        push @items, \%detail;
     } 
@@ -368,32 +487,88 @@ sub GetFollowUsers {
 }
 
 sub ChangePWD {
-    my ( $user, $old, $new, $response ) = @_;     
-    my $url = sprintf ( "%s/user/changepwd/%s/%s/%s", $server, $user, $old, $new );
-    
-    return 1 if length( $new ) < 6 || $new !~ m/[a-zA-Z]/ || $new !~ m/[0-9]/; 
+    my ( $user, $old, $new, $type, $url, $response ) = @_;
 
-    # 0: success.
-    # 1: network error.
-    # 2: auth error.
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
-    
-    return 1 unless $response->is_success;
+    if ( $type eq 'other' ) {
+        $url = sprintf ( "%s/user/changepwd/%s/%s", $server, $user, $new );
+        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        return 1 unless $response->is_success;
+        my $content = $response->content; chomp( $content );
+        return 1 if $content eq 'set failed';
+        return 0 if $content eq 'success';
+    } else {
+        $url = sprintf ( "%s/user/changepwd/%s/%s/%s", $server, $user, $old, $new );
+        return 1 if length( $new ) < 6 || $new !~ m/[a-zA-Z]/ || $new !~ m/[0-9]/; 
+
+        # 0: success.
+        # 1: network error.
+        # 2: auth error.
+        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        return 1 unless $response->is_success;
   
-    my $content = $response->content; chomp( $content );
+        my $content = $response->content; chomp( $content );
 
-    return 1 if $content eq 'set failed';
-
-    return 2 if $content eq 'auth failed';
-
-    return 0 if $content eq 'success';
+        return 1 if $content eq 'set failed';
+        return 2 if $content eq 'auth failed';
+        return 0 if $content eq 'success';
+    }
 }
 
 sub SetFilterMessage {
-    my ( $user, $name, $node, $response ) = @_;
+    my ( $user, $name, $node, $time, $response ) = @_;
     my $url = sprintf ( "%s/filter/add/%s/%s/%s", $server, $user, $name, $node );
+    $url = sprintf("%s/filter/add/%s/%s/%s/%s", $server, $user, $time, $name, $node) if $time;
 
     eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    return 1 unless $response->is_success;
+
+    my $content = $response->content; chomp( $content ); 
+    return 0 if $content eq 'ok';
+
+    return 1;
+}
+
+sub GetNodes {
+    my ( $hms, @nodes ) = @_;
+
+    eval{ @nodes = NS::Hermes::Range->new()->load($hms)->list() };
+    return 1 if $@;
+
+    return 2 if scalar @nodes > 20;
+
+    map {
+        my $key = $_;
+        return 3 if $key =~ /^\.|\.$/;
+        $key =~ s/\.//g;
+        return 3 unless length($key) > 4;
+    } @nodes;
+
+    return join(':', @nodes); 
+}
+
+sub SetFilterMessageGrp {
+    my ( $user, $name, $hms, $time, $response ) = @_;
+
+    my ( @nodes, $url );
+    eval { @nodes = NS::Hermes::Range->new()->load($hms)->list() };
+    if ( $@ ) { return 1 }; 
+
+    return 2 if scalar @nodes > 20;
+
+    map {
+          my $key = $_; 
+          return 3 if $key =~ /^\.|\.$/;
+          $key =~ s/\.//g;
+          return 3 unless length($key) > 4;
+    } @nodes;
+
+    my $node = join(':', @nodes);
+
+    $url = sprintf ( "%s/filter/add/%s/%s/%s", $server, $user, $name, $node );
+    $url = sprintf("%s/filter/add/%s/%s/%s/%s", $server, $user, $time, $name, $node) if $time;
+
+    eval { $response = $userAgent->get( $url ) }; 
+    if ($@) { return 1; }
     return 1 unless $response->is_success;
 
     my $content = $response->content; chomp( $content ); 
@@ -495,6 +670,14 @@ sub GetRecords {
 
     my $content = $response->content; chomp( $content );
     return $content;
+}
+
+sub GetGraph {
+    my ($type, $name, $small, $width, $height) = @_;
+    my $url = sprintf("http://rrd.nices.net:9922/stats/rrdGraph?type=%s&name=%s&small=%s&width=%s&height=%s", $type, $name, $small, $width, $height);
+    my $res = $imgUA->get($url);
+    
+    return $res->content;
 }
 
 sub GetFilterItems {

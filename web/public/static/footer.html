@@ -4,18 +4,21 @@
       <ul>
         <li><a href="#pageGlance" data-icon="grid">浏览报警</a></li>
         <li><a href="/subscribe" onclick="getSubscribe(event)" data-icon="plus">订阅监控</a></li>
-        <li><a href="/profile" data-icon="gear" data-prefetch="true">个人设置</a></li>
+        <li><a href="/profile" data-icon="gear">个人设置</a></li>
       </ul>
     </div>
   </div>
 
   <script>
      function getSubscribe(event) {
-         if (localStorage.filterBiz) {
-            var url = '/subscribe?fname='+localStorage.filterBiz;
-            $(event.target).attr('href', url);
+         var $target = $(event.target);
+         if ($target.attr('href') === '/login') { return; }
+
+         if ( localStorage.filterBiz ) {
+            var url = '/subscribe?fname=' + localStorage.filterBiz;
+            $target.attr('href', url);
          } else {
-            $(event.target).attr('href', '/subscribe');
+            $target.attr('href', '/subscribe');
          }
      }
   </script>

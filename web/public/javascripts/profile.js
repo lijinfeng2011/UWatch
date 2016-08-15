@@ -1,3 +1,6 @@
+var TIMEOUT = 30;
+var _countdown = 0;
+
 $(document).on('pageload', '#profile', function() {
     $('#methodBtn').click( ajaxSubmitMethod );
 });
@@ -23,6 +26,10 @@ $(document).on('pageshow', '#profile', function() {
    }
 });
 
+$(document).on('pagehide', '#profile', function(){
+    _countdown = 0; 
+});
+
 function getFilterItems() {
     sendAjaxRequest({ 
         url: "/ajaxGetFilterItems",
@@ -32,6 +39,7 @@ function getFilterItems() {
         error: ajax_error });
 
     function filterItems(data) {
+        var id = 0;
         var $list = $('#filterList');
         $.each (data.response, function(n, value) {
             var $li = $('<li></li>').appendTo($list);
@@ -42,12 +50,12 @@ function getFilterItems() {
             var $fieldset = $('<fieldset data-role="controlgroup"></fieldset>').appendTo($nodeList);
 
             $.each (value, function(i, node) {
-                var sp = node.split(':');                
-                $('<label for="'+sp[0]+'">'+sp[0]+' (by:'+sp[1]+')</label>').appendTo($fieldset);
+                var sp = node.split(':'); id++;             
+                $('<label for="'+sp[0]+':'+ id +'">'+sp[0]+' (by:'+sp[1]+')</label>').appendTo($fieldset);
                 if (sp[2] == '1') { 
-                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+'" onclick="filterRequest(event)" checked="checked">').appendTo($fieldset);
+                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+':'+id+'" onclick="filterRequest(event)" checked="checked">').appendTo($fieldset);
                 } else {
-                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+'" disabled="disabled" checked="checked">').appendTo($fieldset);
+                    $('<input type="checkbox" name="'+sp[0]+'" id="'+sp[0]+':'+id+'" disabled="disabled" checked="checked">').appendTo($fieldset);
                 }
             });
                                  
@@ -62,19 +70,20 @@ function getFilterItems() {
 
 function filterRequest(event) {
     var fstatus = event.target.checked ? 1 : 0;
-    var node = event.target.id,
+    var index = event.target.id,
         name = $(event.target).closest('.filter-collapse').attr('data-name');
+    var keys = index.split(":");
 
     if ( fstatus == 1 ) {
         sendAjaxRequest({ 
-            url: "/ajaxSetFilterMessage?name=" + name + '&node=' + node,
+            url: "/ajaxSetFilterMessage?name=" + name + '&node=' + keys[0],
             before: showLoader,
             success: set_success,
             complete: hideLoader,
             error: ajax_error });
      } else {
         sendAjaxRequest({ 
-            url: "/ajaxDelFilterMessage?name=" + name + '&node=' + node,
+            url: "/ajaxDelFilterMessage?name=" + name + '&node=' + keys[0],
             before: showLoader,
             success: del_success,
             complete: hideLoader,
@@ -185,13 +194,14 @@ function triggerAlarm() {
                 $("#alarm-form input[type='button']").button('disable');
                 $("#alarm-form input[type='text']").textinput('disable');
                 $("#alarm-form input[type='tel']").textinput('disable');
-                $("#alarm-form label").css('color', '#aaa');
+                $('#alarm-form label').css('color', '#aaa');
             } else {
                 $(".alarm-change input[name='fullFormat']").checkboxradio('enable');
                 $("#alarm-form input[type='button']").button('enable');
                 $("#alarm-form input[type='text']").textinput('enable');
                 $("#alarm-form input[type='tel']").textinput('enable');
                 $("#alarm-form label").css('color', '');
+                if ( _countdown > 0 ) $('#testBtn').button('disable');
             }
             popOver('恭喜！成功了yeah～'); 
         }
@@ -205,6 +215,22 @@ function triggerTest() {
         success: ajax_success,
         complete: hideLoader,
         error: ajax_error }); 
+
+    $('#testBtn').button('disable');
+    _countdown = TIMEOUT; 
+    refreshBtn( $('#testBtn') );
+}
+
+function refreshBtn( btn ) {
+    if ( _countdown === 0 ) {
+        btn.val('设置测试').button("refresh");
+        if ($('#alarmValue').hasClass("ui-checkbox-on")) {
+            btn.button('enable');
+        }
+    } else {
+        btn.val( '剩余' + --_countdown + '秒' ).button("refresh");
+        setTimeout( function(){ refreshBtn(btn)}, 1000 );
+    }
 }
 
 function triggerFormat() {
@@ -224,6 +250,8 @@ function ajaxChangePWD( event ) {
     var shouldReturn = false;
                                                                                    
     $.each ( $('input[type="password"]'), function(n, input) {
+       if ( $(input).attr('name') == 'old-pwd' ) { return true; }
+
        var value = $(input).val();
 
        if ( value.length < 6 ) { popOver('长度不小于6位呦～'); shouldReturn = true; return false; }

@@ -13,10 +13,10 @@ function calendar(container_id) {
         'lijinfeng'  :   '#0ce3ac',
         'jiangwei-s' :   '#ed1c24',
         'wangdahai'  :   '#faa51a',
-        'mayunshan'  :   '#222', 
-        'xudong'     :   '#0479a7',
+        'xujinshuai' :   '#222', 
+        'haoyixin'   :   '#0479a7',
         'zhaosiyu-pd':   '#9c629c',
-        'xujinshuai' :   '#6ab5ba',
+        'mayunshan'  :   '#6ab5ba',
         'g-cloudops' :   '#1e8c00'
     };
 

@@ -1,27 +1,69 @@
 <div data-role="page" id="pageLogin">
   <div data-role="header">
-    <h1>登录窗口</h1>
+    <a data-role="button" href="/" data-icon="delete" data-iconpos="notext" title="返回" class="ui-btn-left"></a>
+    <h1>登录UWatch网站</h1>
   </div>
 
   <div data-role="content">
-    <form method="post" action="/checkin">
+    <form method="post" id="logForm">
       <div data-role="fieldcontain">
-        <label for="lname">账户:</label>
-        <input type="text" name="lname" id="lname" placeholder="您的用户名称..">
-        <label for="lpwd">密码:</label>
-        <input type="password" name="lpwd" id="lpwd" placeholder="您的登录密码..">
+        <div class="ui-input-text ui-body-inherit ui-corner-all ui-shadow-inset ui-input-has-clear" style="padding-left:2.375em;">
+          <a href="#" class="ui-input-clear ui-btn ui-icon-user ui-btn-icon-notext ui-corner-all" style="left:0"></a>
+          <input name="lname" type="text" id="lname" placeholder="用户名" data-role="none">
+        </div>
+
+        <div class="ui-input-text ui-body-inherit ui-corner-all ui-shadow-inset ui-input-has-clear" style="padding-left:2.375em;">
+          <a href="#" class="ui-input-clear ui-btn ui-icon-lock ui-btn-icon-notext ui-corner-all" style="left:0"></a>
+          <input name="lpwd" type="password" id="lpwd" placeholder="密码" data-role="none">
+        </div>
+
+        <div>
+            <div class="ui-input-text ui-body-inherit ui-corner-all ui-shadow-inset ui-input-has-clear" style="padding-left:2.375em; width:40%; float:left;">
+               <a href="#" class="ui-input-clear ui-btn ui-icon-lock ui-btn-icon-notext ui-corner-all" style="left:0"></a>
+               <input name="code" type="text" id="code" placeholder="验证码" data-role="none">
+            </div>
+            <div style="float:right; width:35%; margin:0.5em">
+                <a id="refreshCap" onfocus=this.blur() href="javascript:void(0)">
+                    <img id='captcha'></img>
+                </a>
+            </div>
+        </div>
+
       </div>
-      <div data-role="controlgroup" data-type="horizontal">
-        <input type="submit" data-inline="true" value="登录" onclick="login(event)">
-        <input type="submit" data-inline="true" value="取消">
-      </div>
+
+      <input type="submit" value="登录" onclick="login(event)">
     </form>
+
+    <hr color="#ddd" size="3" style="margin-top:1em;">
+    <div>
+        <p style="float:left">其他登录方式: </p>
+
+        [% IF sso %]
+        <a href='[% web_addr %]/ext/nsso/login' title="NSSO" data-ajax="false">
+            <img src="/images/Logo.png" style="margin:5px" width="40">
+        </a>
+        [% END %]
+        </a>
+    </div>
   </div>
 
   <script>
+  ( function($) {
+      $("#cancellog").bind('click',function(){
+          $('.ui-dialog').dialog('close');
+      });
+
+      $('#refreshCap').bind('click', function() {
+          $('#captcha').attr('src', '/getCaptcha?'+Math.random());
+      });
+
+      $('#captcha').attr('src', '/getCaptcha?'+Math.random()); 
+  })(jQuery);
+
   function login( event ) {
       var pwd = $.md5( $('input[name="lpwd"]').val() );
       $('input[name="lpwd"]').val(pwd);
+      $('#logForm').attr('action', '/checkin');
   }
   </script>
 
@@ -29,4 +71,3 @@
   </div>
 
 </div>
-

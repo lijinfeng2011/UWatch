@@ -1,14 +1,22 @@
 <div data-role="page" id="mesgDetail">
   <link rel="stylesheet" href="/css/jquery.jqplot.css" />
+  <link rel="stylesheet" href="/css/jquery.webui-popover.min.css" />
+  <link rel="stylesheet" href="/css/jqm-datebox-1.4.5.min.css" />
   
   <script src="/javascripts/lib/jquery.jqplot.min.js"></script>
   <script src="/javascripts/lib/jqplot.categoryAxisRenderer.min.js"></script>
   <script src="/javascripts/lib/underscore-min.js"></script>
   <script src="/javascripts/lib/hideAddressBar.js"></script>
 
-  <script src="/javascripts/mesgDetail_desktop.min.js"></script>
+  <script src="/javascripts/util/jqm-databox.doc.js"></script>
+  <script src="/javascripts/util/jqm-datebox-1.4.5.core.min.js"></script>
+  <script src="/javascripts/util/jqm-datebox-1.4.5.mode.datebox.min.js"></script>
+  <script src="/javascripts/util/jquery.mobile.datebox.i18n.zh-CN.utf8.min.js"></script>
+ 
+  <script src="/javascripts/lib/jquery.webui-popover.min.js"></script>
+  <script src="/javascripts/mesgDetail_desktop.min.js?v=2.3.2"></script>
 
-  <div data-role="header" data-position="fixed" data-theme="b">
+  <div data-role="header" data-position="fixed" data-tap-toggle="false" data-theme="b">
     <a href="#pageGlance" data-role="button" data-transition="flip">返回</a>
     <h2>报警详情</h2>
   </div>
@@ -39,10 +47,9 @@
         <ul data-role="listview" id="contentList1" class="contentList">
 	  [% FOREACH message IN mesgs %]
             <li data-swipeurl="#" [% oldview ? 'class="gary"' : '' %]>
-                <button data-role="none" [% oldview ? ' disabled="disabled"' : '' %] class="filterBtn" onclick="filter(event)">屏蔽1小时</button>
                 <span class="index hide">[% message.idx %] </span>
                 <span class="node hide">[% message.node %]</span>
-                [% message.content %]
+                <span class="detail">[% message.content %]</span>
             </li>
           [% END %] 
 	</ul>
@@ -54,8 +61,142 @@
     </div>
   </div>
 
-  <script> 
-  (function($){ $('.wrapper_desktop').parent('div').css('padding','0px'); })(jQuery);
-  </script>
+  <div id="popover-model" style="display:none">
+    <div class="left-part">
+       <div class="detail-row">
+         <span class="col-left">机器名称：</span> 
+         <span id="machineName" class="col-right"></span>
+         <div style="clear:both"></div>
+       </div>
+       <div class="detail-row">
+         <span class="col-left">业务名称：</span> 
+         <span id="bizName" class="col-right"></span>
+         <div style="clear:both"></div>
+       </div>
+       <div class="detail-row">
+         <span class="col-left">第一值班：</span> 
+         <span id="oncaller" class="col-right">lijinfeng(Tel：13811677853)</span>
+         <div style="clear:both"></div>
+       </div>
+       <div class="detail-row">
+         <span class="col-left">报警时间：</span> 
+         <span id="alarmTime" class="col-right"></span>
+         <div style="clear:both"></div>
+       </div>
+       <div class="detail-row">
+         <span class="col-left" style="vertical-align:top; padding-top:5px;">报警详情：</span> 
+         <textarea id="alarmInfo" row="5" class="col-right" style="resize:none; overflow:visible;" readonly="readonly"></textarea>
+       </div>
+       <div class="detail-row">
+         <hr style="margin-bottom:1.5em;" size="3" color="#ddd">
+       </div>
+       <div class="detail-row">
+         <span class="col-left">单机屏蔽：</span> 
+         <span class="col-left-2 stopAlarm">
+           <!--
+           <select name="period" id="stopPrd" data-role="none">
+              <optgroup label="短时间">
+                <option value="0.5">半小时</option>
+                <option value="1">一小时</option>
+                <option value="3">三小时</option>
+                <option value="6">六小时</option>
+              </optgroup>
+              <optgroup label="长时间">
+                <option value="24">一天</option>
+                <option value="48">两天</option>
+              </optgroup>
+           </select> --!>
+         </span>
+         <span class="col-left-3">
+            <button data-icon="minus" data-theme="d" onclick="filter(event)" id="single">屏蔽</button>
+         </span>   
+       </div>
+       <div class="detail-row" style="padding-top:0.5em">
+         <span class="col-left">群组屏蔽：</span> 
+         <span class="col-left-2-1">
+           <input id="hermesString">
+         </span>
+         <span class="col-left-2-2 stopAlarmGrp">
+         </span>
+         <span class="col-left-3">
+            <button data-icon="minus" data-theme="d" onclick="filter(event)" id="group">屏蔽</button>
+         </span>   
+       </div>
+       <div class="detail-row" style="padding-top:1em;">
+         <span class="col-left">修改阀值：</span> 
+         <span class="col-left-2">
+            <input type="number" name="Bar" placeholder="选择新的阀值" id="Bar" disabled="true">
+         </span> 
+         <span class="col-left-3"><button data-icon="check" data-theme="d" disabled="true">更新</button></span> 
+       </div> 
+   </div>
 
+   <div class="right-part">
+      <div style="padding-left:1em;">
+         <span style="font-weight:bold;">图表显示 </span>
+         <span class="link-tab link-active"> <a href="#"> 机器</a> </span> 
+         <span class="link-tab"> <a href="#"> 集群</a> </span> 
+      </div> 
+      <div style="padding-left:10px; padding-top:10px;">
+        <div style="display:inline-block;" width=49% >
+            <a target="_blank" href="#"><img id="CPU" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="MEM" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="IFACE" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="LOAD" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+      </div>
+   </div>
+
+  </div>
+
+  <script> 
+  (function($){ 
+       $('.wrapper_desktop').parent('div').css('padding','0px');
+  })(jQuery);
+  </script>
+</div>
+       <div class="detail-row" style="padding-top:1em;">
+         <span class="col-left">修改阀值：</span> 
+         <span class="col-left-2">
+            <input type="number" name="Bar" placeholder="选择新的阀值" id="Bar" disabled="true">
+         </span> 
+         <span class="col-left-3"><button data-icon="check" data-theme="d" disabled="true">更新阀值</button></span> 
+       </div> 
+   </div>
+
+   <div class="right-part">
+      <div style="padding-left:1em;">
+         <span style="font-weight:bold;">图表显示 </span>
+         <span class="link-tab link-active"> <a href="#"> 机器</a> </span> 
+         <span class="link-tab"> <a href="#"> 集群</a> </span> 
+      </div> 
+      <div style="padding-left:10px; padding-top:10px;">
+        <div style="display:inline-block;" width=49% >
+            <a target="_blank" href="#"><img id="CPU" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="MEM" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="IFACE" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+        <div style="display:inline-block;" width=49% > 
+            <a target="_blank" href="#"><img id="LOAD" width="300" height="130" src="/images/no_image.jpg" onerror="this.src='/images/no_image.jpg'"></a> 
+        </div>
+      </div>
+   </div>
+
+  </div>
+
+  <script> 
+  ( function($){ 
+       $('.wrapper_desktop').parent('div').css('padding','0px');
+  }) (jQuery);
+  </script>
 </div>

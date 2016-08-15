@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/jquery.mobile-1.4.3/jquery.mobile-1.4.3.min.css">
+    <link rel="stylesheet" href="/css/calendar.css">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0">
+    <script src="/javascripts/lib/jquery.min.js"></script>
+    <script src="/javascripts/lib/jquery.mobile-1.4.3.min.custom.js"></script>
+    <script src="/javascripts/global.min.js"></script>
+    <script src="/javascripts/glance.min.js"></script>
+    <script src="/javascripts/util/goTop.min.js?v=1"></script>
+    <script src="/javascripts/util/calendar_small.js"></script>
+</head>
+
+<body>
+    <div id="myCalendar" style="margin-bottom:5em"> </div>
+
+    <style type="text/css">
+    .mytable .day {
+        height: 95px;
+        min-width: 90px;
+    }
+    .mytable th {
+        min-width: 90px;
+    }
+    .task {
+        height: 15px;
+    }
+    .mytable .today .day .date {
+        position: absolute;
+        padding-left: 60px;
+    }
+    .pDiagram {
+        width: 160px;
+    }
+    </style>
+
+    <script>
+       var cal = null;
+       ( function($) {
+           if (cal == null) {
+              cal = new calendar('myCalendar');
+              cal.draw();
+           }
+       }) (jQuery);
+    </script>
+
+</body>
+
+</html>
