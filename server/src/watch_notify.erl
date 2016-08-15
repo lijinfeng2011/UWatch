@@ -150,7 +150,7 @@ send( User, Token, UserInfo, Info, Method, Detail, Level ) ->
          "&userinfo=",UserInfo, "&detail=", Detail, "&info=",  Info]
     ),
     watch_log:info("notify send:~p~n", [MesgNotify]),
-    case httpc:request(post,{"http://127.0.0.1:7788/watch_alarm",
+    case httpc:request(post,{"http://127.0.0.1:7788/uwatch_alarm",
       [],"application/x-www-form-urlencoded", MesgNotify },[],[]
       ) of
       {ok, {_,_,Body}}-> Body, Stat = "ok";
