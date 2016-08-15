@@ -10,7 +10,7 @@ use LWP::UserAgent;
 use Digest::MD5;
 use Cwd;
 use File::Basename;
-use Alarm;
+use Ctrl;
 use URI::Escape;
 
 our $VERSION = '0.1';
@@ -82,7 +82,7 @@ get '/homepage' => sub {
 
     # Access via with token;
     if ( $param{token} ) {
-        my $user = Alarm::GetUserViaToken($param{token});
+        my $user = Ctrl::GetUserViaToken($param{token});
         if ( $user && $user ne 'error' ) {
             session 'mobile_user' => $user;
             renderGlance();
@@ -101,9 +101,9 @@ get '/login' => sub {
 };
 
 get '/otherLogin' => sub {
-    unless ( Alarm::HasUser( session('mobile_user') ) ) {
-        my ( $pass, $md5 ) = Alarm::Mkpass();
-        Alarm::AddUser(session('mobile_user'), $md5); 
+    unless ( Ctrl::HasUser( session('mobile_user') ) ) {
+        my ( $pass, $md5 ) = Ctrl::Mkpass();
+        Ctrl::AddUser(session('mobile_user'), $md5); 
     }
 
     session 'login_type' => 'other';
@@ -148,7 +148,7 @@ post '/checkin' => sub {
         $loginList{$user} = time;
 
         unless ( session('mobile_user') ) {
-            my $response = Alarm::Login( $user, $pwd );
+            my $response = Ctrl::Login( $user, $pwd );
 
             return template 'login_mesg.tt', { status => $response } if $response;
             
@@ -182,8 +182,8 @@ get '/getCaptcha' => sub {
 get '/glance' => sub { renderGlance(); };
 
 any '/subscribe' => sub {
-    my $response = Alarm::GetAllAlarmItem();
-    my $allBiz = Alarm::GetAllBiz();
+    my $response = Ctrl::GetAllAlarmItem();
+    my $allBiz = Ctrl::GetAllBiz();
 
     return template 'subscribe.tt', { user => session('mobile_user'), error => 1, Biz => $allBiz } unless $response;
 
@@ -225,7 +225,7 @@ any '/subscribe' => sub {
 };
 
 get '/advancedSetting' => sub {
-    my $allBiz = Alarm::GetAllBiz();
+    my $allBiz = Ctrl::GetAllBiz();
     template 'advancedSetting.tt', { Biz => $allBiz }; 
 };
 
@@ -235,9 +235,9 @@ get '/mesgDetail' => sub {
  
     eval {
         if ( $param{type} eq 'old' ) {
-            $message = Alarm::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'tail', 100 );
+            $message = Ctrl::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'tail', 100 );
         } else {
-            $message = Alarm::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'head', 100 );
+            $message = Ctrl::GetMessageDetail( session('mobile_user'), $param{id}, 'curr', 'head', 100 );
         }
     };
 
@@ -254,9 +254,9 @@ get '/mesgDetail' => sub {
 };
 
 get '/profile' => sub {
-    my $users      = Alarm::GetAllUsers(); my @followUsers = ();
-    my $follower   = Alarm::GetFollowUsers( session('mobile_user') );
-    my $notifyInfo = Alarm::GetNotifyInfo( session('mobile_user') );
+    my $users      = Ctrl::GetAllUsers(); my @followUsers = ();
+    my $follower   = Ctrl::GetFollowUsers( session('mobile_user') );
+    my $notifyInfo = Ctrl::GetNotifyInfo( session('mobile_user') );
 
     map {
         my $user = $_; 
@@ -264,7 +264,7 @@ get '/profile' => sub {
         push @followUsers, $user; 
     } grep { $_->{name} ne session('mobile_user') } @$users;
 
-    my $profileItems = Alarm::GetProfile( session('mobile_user') );
+    my $profileItems = Ctrl::GetProfile( session('mobile_user') );
     my %options = ( user => session('mobile_user'), followUsers => \@followUsers );
 
     if ( scalar @$profileItems == 4 ) {
@@ -294,7 +294,7 @@ ajax '/ajaxBookSubscribe' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $response = Alarm::BookSubscribeItems( \%param, session('mobile_user') );
+    my $response = Ctrl::BookSubscribeItems( \%param, session('mobile_user') );
     to_json({ response => $response });
 };
 
@@ -302,7 +302,7 @@ ajax '/ajaxGetMessageGroup' => sub {
     return unless validRequest();
 
     my $type = request->params->{type};
-    my $message = Alarm::GetMessageGroup(session('mobile_user'));
+    my $message = Ctrl::GetMessageGroup(session('mobile_user'));
 
     if ( request->params->{type} eq 'self' ) {
         to_json({ mesgGrp => $message->[0] });
@@ -315,7 +315,7 @@ ajax '/ajaxGetSubDetail' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $items = Alarm::GetSubscribeDetail( $param{group}, session('mobile_user') );
+    my $items = Ctrl::GetSubscribeDetail( $param{group}, session('mobile_user') );
     to_json({ subDetail => $items });
 };
 
@@ -327,7 +327,7 @@ ajax '/ajaxSetProfile' => sub {
     # XSS Attack
     validParams( \%param );
 
-    my $response = Alarm::SetProfile( \%param, session('mobile_user') );
+    my $response = Ctrl::SetProfile( \%param, session('mobile_user') );
     to_json({ response => $response });
 };
 
@@ -335,7 +335,7 @@ ajax '/ajaxChangePWD' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $resp = Alarm::ChangePWD(session('mobile_user'), $param{old}, $param{new}, session('login_type'));
+    my $resp = Ctrl::ChangePWD(session('mobile_user'), $param{old}, $param{new}, session('login_type'));
     to_json({ response => $resp });
 };
 
@@ -345,10 +345,10 @@ ajax '/ajaxGetMessage' => sub {
     my %param = %{request->params}; my $response;
 
     if ( $param{type} eq 'new' ) {
-        $response = Alarm::GetMessageDetail(session('mobile_user'), $param{id}, 'curr', 'head', 'all');
+        $response = Ctrl::GetMessageDetail(session('mobile_user'), $param{id}, 'curr', 'head', 'all');
     }
     elsif ( $param{type} eq 'old' ) {
-        $response = Alarm::GetMessageDetail(session('mobile_user'), $param{id}, $param{pos}, 'tail', 100);
+        $response = Ctrl::GetMessageDetail(session('mobile_user'), $param{id}, $param{pos}, 'tail', 100);
     }
     
     to_json({ response => $response });
@@ -359,7 +359,7 @@ ajax '/ajaxSetFilterMessage' => sub {
 
     my %param = %{request->params};
 
-    my $response = Alarm::SetFilterMessage( session('mobile_user'), $param{name}, $param{node}, $param{time} );
+    my $response = Ctrl::SetFilterMessage( session('mobile_user'), $param{name}, $param{node}, $param{time} );
     to_json({ response => $response });
 };
 
@@ -368,7 +368,7 @@ ajax '/ajaxSetFilterMessageGrp' => sub {
 
     my %param = %{request->params};
 
-    my $response = Alarm::SetFilterMessageGrp( session('mobile_user'), $param{name}, $param{hms}, $param{time} );
+    my $response = Ctrl::SetFilterMessageGrp( session('mobile_user'), $param{name}, $param{hms}, $param{time} );
 
     to_json({ response => $response });
 };
@@ -378,7 +378,7 @@ ajax '/ajaxGetNodes' => sub {
 
     my %param = %{request->params};
 
-    my $nodes = Alarm::GetNodes( $param{hms} );
+    my $nodes = Ctrl::GetNodes( $param{hms} );
 
     to_json({ nodes => $nodes, name => $param{name}, time => $param{time}, hermes => $param{hms} });
 };
@@ -387,7 +387,7 @@ ajax '/ajaxDelFilterMessage' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $response = Alarm::DelFilterMessage( session('mobile_user'), $param{name}, $param{node} );
+    my $response = Ctrl::DelFilterMessage( session('mobile_user'), $param{name}, $param{node} );
     to_json({ response => $response });
 };
 
@@ -395,7 +395,7 @@ ajax '/ajaxSetAlarm' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Alarm', $param{value} );
+    my $response = Ctrl::SetNotifyInfo( session('mobile_user'), 'Alarm', $param{value} );
     to_json({ response => $response });
 };
 
@@ -403,7 +403,7 @@ ajax '/ajaxSetFormat' => sub {
     return unless validRequest();
 
     my %param = %{request->params};
-    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Format', $param{value} );
+    my $response = Ctrl::SetNotifyInfo( session('mobile_user'), 'Format', $param{value} );
     to_json({ response => $response });
 };
 
@@ -415,40 +415,40 @@ ajax '/ajaxSetMethod' => sub {
     # XSS Attack
     validParams( \%param );
 
-    my $response = Alarm::SetNotifyInfo( session('mobile_user'), 'Method', $param{value} );
+    my $response = Ctrl::SetNotifyInfo( session('mobile_user'), 'Method', $param{value} );
     to_json({ response => $response });
 };
 
 ajax '/ajaxTriggerTest' => sub {
     return unless validRequest();
 
-    my $response = Alarm::TriggerNotifyTest(session('mobile_user'));
+    my $response = Ctrl::TriggerNotifyTest(session('mobile_user'));
     to_json({ response => $response });
 };
 
 ajax '/ajaxGetRecords' => sub {
     return unless validRequest();
 
-    my $response = Alarm::GetRecords( request->params->{hermes} );
+    my $response = Ctrl::GetRecords( request->params->{hermes} );
     to_json({ response => $response });
 };
 
 ajax '/ajaxGetTasks' => sub {
     my ($start, $end) = ( request->params->{s}, request->params->{e} );
     return to_json({ response => 'No Content'}) unless $start =~ /^\d+$/ && $end =~ /^\d+$/;
-    my $response = Alarm::GetTasks( $start, $end );
+    my $response = Ctrl::GetTasks( $start, $end );
     to_json( {response => $response} );
 };
 
 ajax '/ajaxGetFilterItems' => sub {
-    my $response = Alarm::GetFilterItems(session('mobile_user'));
+    my $response = Ctrl::GetFilterItems(session('mobile_user'));
     to_json( {response => $response} );
 };
 
 ajax '/ajaxGetNodeDetail' => sub {
     return unless validRequest();
 
-    my $response = Alarm::GetNodeDetail(request->params->{node});
+    my $response = Ctrl::GetNodeDetail(request->params->{node});
     content_type 'application/json';
     to_json( { detail => $response } );
 };
@@ -456,14 +456,14 @@ ajax '/ajaxGetNodeDetail' => sub {
 ajax '/ajaxGetBizByNode' => sub {
     return unless validRequest();
 
-    my $response = Alarm::GetBizbyNodes(request->params->{node});
+    my $response = Ctrl::GetBizbyNodes(request->params->{node});
     to_json( { bizList => $response } );
 };
 
 ajax '/ajaxGetNodesByHermes' => sub {
     return unless validRequest();
 
-    my $response = Alarm::GetNodesbyHermes(request->params->{hermes});
+    my $response = Ctrl::GetNodesbyHermes(request->params->{hermes});
     to_json( { nodesList => $response } );
 };
 
@@ -474,12 +474,12 @@ any '/getGraph' => sub {
     ($height, $width) = (120, 300) if $small; 
 
     header('Content-Type' => 'image/png');
-    return Alarm::GetGraph( $type, $name, $small, $width, $height );
+    return Ctrl::GetGraph( $type, $name, $small, $width, $height );
 };
 
 ############## Functions ################
 sub renderGlance {
-    my $mesgGroup = Alarm::GetMessageGroup(session('mobile_user'));
+    my $mesgGroup = Ctrl::GetMessageGroup(session('mobile_user'));
 
     template 'glance.tt', { 
         user => session('mobile_user'),

@@ -1,4 +1,4 @@
-package Alarm;
+package Ctrl;
 
 use strict;
 use warnings;
@@ -39,7 +39,7 @@ sub uaget
     my $ua = LWP::UserAgent->new();
     $ua->timeout( $timeout );
     my $res = $ua->get( $server.$uri );
-    info sprintf "[UWatchApi] [%d] $server$uri\n", $res->status_line if $ENV{NS_DEBUG};
+    info sprintf "[UWatchApi] [%s] $server$uri\n", $res->status_line if $ENV{NS_DEBUG};
     return $res;
 }
 
