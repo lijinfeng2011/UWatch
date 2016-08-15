@@ -19,12 +19,12 @@ use NS::Util::OptConf;
 use NS::Hermes;
 use NS::Util::Sudo;
 use NS::Hermes::Range;
+use Dancer ':syntax';
 
 my $server = 'http://127.0.0.1:9999';
-my $userAgent = LWP::UserAgent->new();
-$userAgent->timeout(30);
 my $imgUA = LWP::UserAgent->new();
 $imgUA->timeout(10);
+
 my %allAlias = ();
 my %allLevel = ();
 my @subItems = ();
@@ -32,11 +32,22 @@ my $g_config;
 
 my $range_db;
 
+sub uaget
+{
+    my ( $uri, $timeout ) = @_;
+    $timeout ||= 30;
+    my $ua = LWP::UserAgent->new();
+    $ua->timeout( $timeout );
+    my $res = $ua->get( $server.$uri );
+    info sprintf "[UWatchApi] [%d] $server$uri\n", $res->status_line if $ENV{NS_DEBUG};
+    return $res;
+}
+
 sub Login {
     my ( $user, $pwd, $response ) = @_;
-    my $url = sprintf ( "%s/user/auth/%s/%s", $server, $user, $pwd );
+    my $uri = sprintf ( "/user/auth/%s/%s", $user, $pwd );
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     if ($@) { return 1; }
 
     if    ( not $response->is_success )  { return 1; } 
@@ -47,7 +58,7 @@ sub Login {
 sub HasUser {
     my $user = shift;
 #    print Dumper($user);
-    my $resp = $userAgent->get(sprintf("%s/user/list", $server));
+    my $resp = uaget( "/user/list" );
     return 1 unless $resp->is_success;
 
     my %user = map{ $_ => 1 } split /\n/, $resp->content;
@@ -64,17 +75,14 @@ sub Mkpass {
 
 sub AddUser {
     my ( $user, $pwd ) = @_;
-    my $url = sprintf("%s/user/add/%s/%s", $server, $user, $pwd);
-    my $response = $userAgent->get( $url );
+    my $response = uaget( "/user/add/$user/$pwd" , 30);
 
     return $response->is_success ? 0 : 1;
 }
 
 sub GetAllUsers {
-    my $url = sprintf( "%s/user/list", $server );
     my ( $response, $content, @users );
-   
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( '/user/list' ) };
     return if $@;
   
     $content = $response->content if $response->is_success;
@@ -86,16 +94,14 @@ sub GetAllUsers {
 }
 
 sub GetNoAlarm {
-    my $url = sprintf ( "%s/user/list", $server );
-    my $response = $userAgent->get( $url );
+    my $response = uaget( '/user/list' );
     my $content = $response->content if $response->is_success;
     my @tmp = split ( '\n', $content ) if $content;
 
     my %userList;
     map { $userList{$_} = 0 unless exists $userList{$_}; } @tmp;
     
-    $url = sprintf ( "%s/method/list", $server );
-    $response = $userAgent->get( $url );
+    $response = uaget( '/method/list' );
     $content = $response->content if $response->is_success;
     @tmp = split ( '\n', $content ) if $content;
     
@@ -109,11 +115,8 @@ sub GetNoAlarm {
 }
 
 sub GetItemInfos {
-    my $url = sprintf ( "%s/item/list", $server ); 
     my ( $response, %count );
-
-    $url = sprintf ( "%s/alias/list", $server );
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( '/alias/list' ) };
     return if $@ || not $response->is_success;
     my $items = $response->content; %allAlias = ();
     foreach my $key ( split ( '\n', $items ) ) {
@@ -122,8 +125,7 @@ sub GetItemInfos {
         }
     }
 
-    $url = sprintf ( "%s/notifylevel/list", $server );
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( '/notifylevel/list' ) };
     return if $@ || not $response->is_success;
 
     $items = $response->content; %allLevel = ();
@@ -135,10 +137,8 @@ sub GetItemInfos {
 }
 
 sub GetPrefixItems {
-    my $url = sprintf ( "%s/item/listprefix", $server ); 
     my $response;
-
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( '/item/listprefix' ) };
     return if $@ || not $response->is_success;
 
     my @itemPrefix = sort split('\n', $response->content);
@@ -146,10 +146,10 @@ sub GetPrefixItems {
 }
 
 sub GetSuffixItems {
-    my $url = sprintf ( "%s/item/listsuffix/%s", $server, shift ); 
+    my $uri = sprintf ( "/item/listsuffix/%s", shift ); 
     my $response;
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     return if $@ || not $response->is_success;
 
     my @itemSuffix = sort split('\n', $response->content);
@@ -158,9 +158,9 @@ sub GetSuffixItems {
 
 sub GetSubItems {
     my ( $user,  $response, $items ) = @_; @subItems = ();
-    my $url = sprintf ( "%s/relate/list4user/%s", $server, $user );
+    my $uri = sprintf ( "/relate/list4user/%s", $user );
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     unless ( $@ ) { 
         $items = $response->content if $response->is_success;
         return unless $items;
@@ -211,8 +211,7 @@ sub GetNodeDetail {
     }
 
     my ($oncaller, @mArray, $response);
-    my $url = sprintf ( "%s/cronos/get/now/cronos_base", $server );
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( '/cronos/get/now/cronos_base' ) };
     unless ( $@ ) { 
         my $items = $response->content if $response->is_success;
         my @subItems = split('\n', $items) if $items;
@@ -220,8 +219,7 @@ sub GetNodeDetail {
     }
 
     if ( $oncaller ) {
-        $url = sprintf ("%s/method/get/%s", $server, $oncaller);
-        eval { $response = $userAgent->get( $url ) };
+        eval { $response = uaget( "/method/get/$oncaller" ) };
         unless ( $@ ) { 
             my $items = $response->content if $response->is_success;
             map {
@@ -332,8 +330,7 @@ sub BookSubscribeItems {
             $query .= ':' if $query;
             $query .= join( '.', $hermes, $item );
         } else {
-           $url = sprintf ( "%s/relate/add/%s/%s", $server, $query, $user );
-           eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; } 
+           eval { $response = uaget( "/relate/add/$query/$user" ) }; if ($@) { return 1; } 
            unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }  
 
            $query = join( '.', $hermes, $item );
@@ -342,8 +339,7 @@ sub BookSubscribeItems {
     }
 
     if ( $query ) {
-         $url = sprintf ( "%s/relate/add/%s/%s", $server, $query, $user );
-         eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+         eval { $response = uaget( "/relate/add/$query/$user" ) }; if ($@) { return 1; }
          unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
     }
 
@@ -353,8 +349,7 @@ sub BookSubscribeItems {
             $query .= ':' if $query;
             $query .= join( '.', $hermes, $item );
         } else {
-           $url = sprintf ( "%s/relate/del/%s/%s", $server, $query, $user );
-           eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; } 
+           eval { $response = uaget( "/relate/del/$query/$user" ) }; if ($@) { return 1; } 
            unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
 
            $query = join( '.', $hermes, $item );
@@ -363,8 +358,7 @@ sub BookSubscribeItems {
     }
 
     if ( $query ) {
-         $url = sprintf ( "%s/relate/del/%s/%s", $server, $query, $user );
-         eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+         eval { $response = uaget( "/relate/del/$query/$user" ) }; if ($@) { return 1; }
          unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
     }
 
@@ -414,9 +408,9 @@ sub GetMessageGroup {
 sub GetMessageDetail {
     my ( $user, $group, $pos, $type, $limit, $response, @mesgDetail ) = @_;
 
-    my $url = sprintf ("%s/user/mesg/%s/%s/%s/%s/%s", $server, $user, $group, $pos, $type, $limit);
+    my $uri = sprintf ("/user/mesg/%s/%s/%s/%s/%s", $user, $group, $pos, $type, $limit);
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     unless ( $@ ) { 
         my $items = $response->content if $response->is_success;
         my @tmp = split ( '\n', $items ) if $items;
@@ -440,18 +434,15 @@ sub SetProfile {
     my @param = ( $param->{phone}, $param->{address}, $param->{oncaller}, $param->{refTime} );
  
     my $arguments = join( ':',  @param );
-    my $url = sprintf ( "%s/user/setinfo/%s/%s", $server, $user, $arguments );
 
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    eval { $response = uaget( "/user/setinfo/$user/$arguments" ) }; if ($@) { return 1; }
     unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
 
     if ( $param->{follower} ) {
-        $url = sprintf ( "%s/follow/update/%s/%s", $server, $user, $param->{follower} );
-        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        eval { $response = uaget( "/follow/update/$user/$param->{follower}" ) }; if ($@) { return 1; }
         unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
     } else {
-        $url = sprintf ( "%s/follow/del4user/%s", $server, $user );
-        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        eval { $response = uaget( "/follow/del4user/$user" ) }; if ($@) { return 1; }
         unless ( $response->is_success && $response->content eq 'ok' )  { return 1; }
     }
 
@@ -460,9 +451,9 @@ sub SetProfile {
 
 sub GetProfile {
     my ( $response, $items, @items );
-    my $url = sprintf( "%s/user/getinfo/%s", $server, shift ); 
+    my $uri = sprintf( "/user/getinfo/%s", shift ); 
     
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     unless ( $@ ) { 
         $items = $response->content if $response->is_success;
         chomp( $items ) if $items;
@@ -474,9 +465,9 @@ sub GetProfile {
 
 sub GetFollowUsers {
     my ( $response, $items ); my @items = [];
-    my $url = sprintf( "%s/follow/list4user/%s", $server, shift ); 
+    my $uri = sprintf( "/follow/list4user/%s", shift ); 
     
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     unless ( $@ ) { 
         $items = $response->content if $response->is_success;
         chomp( $items ) if $items;
@@ -487,23 +478,22 @@ sub GetFollowUsers {
 }
 
 sub ChangePWD {
-    my ( $user, $old, $new, $type, $url, $response ) = @_;
+    my ( $user, $old, $new, $type, $uri, $response ) = @_;
 
     if ( $type eq 'other' ) {
-        $url = sprintf ( "%s/user/changepwd/%s/%s", $server, $user, $new );
-        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        eval { $response = uaget( "/user/changepwd/$user/$new" ) }; if ($@) { return 1; }
         return 1 unless $response->is_success;
         my $content = $response->content; chomp( $content );
         return 1 if $content eq 'set failed';
         return 0 if $content eq 'success';
     } else {
-        $url = sprintf ( "%s/user/changepwd/%s/%s/%s", $server, $user, $old, $new );
+        $uri = sprintf ( "/user/changepwd/%s/%s/%s", $user, $old, $new );
         return 1 if length( $new ) < 6 || $new !~ m/[a-zA-Z]/ || $new !~ m/[0-9]/; 
 
         # 0: success.
         # 1: network error.
         # 2: auth error.
-        eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+        eval { $response = uaget( $uri ) }; if ($@) { return 1; }
         return 1 unless $response->is_success;
   
         my $content = $response->content; chomp( $content );
@@ -516,10 +506,10 @@ sub ChangePWD {
 
 sub SetFilterMessage {
     my ( $user, $name, $node, $time, $response ) = @_;
-    my $url = sprintf ( "%s/filter/add/%s/%s/%s", $server, $user, $name, $node );
-    $url = sprintf("%s/filter/add/%s/%s/%s/%s", $server, $user, $time, $name, $node) if $time;
+    my $uri = sprintf ( "/filter/add/%s/%s/%s", $user, $name, $node );
+    $uri = sprintf("/filter/add/%s/%s/%s/%s", $user, $time, $name, $node) if $time;
 
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    eval { $response = uaget( $uri ) }; if ($@) { return 1; }
     return 1 unless $response->is_success;
 
     my $content = $response->content; chomp( $content ); 
@@ -549,7 +539,7 @@ sub GetNodes {
 sub SetFilterMessageGrp {
     my ( $user, $name, $hms, $time, $response ) = @_;
 
-    my ( @nodes, $url );
+    my ( @nodes, $uri );
     eval { @nodes = NS::Hermes::Range->new()->load($hms)->list() };
     if ( $@ ) { return 1 }; 
 
@@ -564,10 +554,10 @@ sub SetFilterMessageGrp {
 
     my $node = join(':', @nodes);
 
-    $url = sprintf ( "%s/filter/add/%s/%s/%s", $server, $user, $name, $node );
-    $url = sprintf("%s/filter/add/%s/%s/%s/%s", $server, $user, $time, $name, $node) if $time;
+    $uri = sprintf ( "/filter/add/%s/%s/%s", $user, $name, $node );
+    $uri = sprintf("/filter/add/%s/%s/%s/%s", $user, $time, $name, $node) if $time;
 
-    eval { $response = $userAgent->get( $url ) }; 
+    eval { $response = uaget( $uri ) }; 
     if ($@) { return 1; }
     return 1 unless $response->is_success;
 
@@ -579,9 +569,8 @@ sub SetFilterMessageGrp {
 
 sub DelFilterMessage {
     my ( $user, $name, $node, $response ) = @_;
-    my $url = sprintf ( "%s/filter/del/%s/%s", $server, $name, $node );
 
-    eval { $response = $userAgent->get( $url ) }; 
+    eval { $response = uaget( "/filter/del/$name/$node" ) }; 
     return 1 if $@ || not  $response->is_success;
 
     my $content = $response->content; chomp( $content ); 
@@ -604,12 +593,12 @@ sub GetNotifyInfo {
 }
 
 sub _getNotifyInfo {
-    my ( $user, $type, $url, $response ) = @_;
-    $url = sprintf( "%s/notify/getstat/%s", $server, $user ) if $type eq 'Alarm';
-    $url = sprintf( "%s/detail/getstat/%s", $server, $user ) if $type eq 'Format';
-    $url = sprintf( "%s/method/get/%s",     $server, $user ) if $type eq 'Method';
+    my ( $user, $type, $uri, $response ) = @_;
+    $uri = sprintf( "/notify/getstat/%s", $user ) if $type eq 'Alarm';
+    $uri = sprintf( "/detail/getstat/%s", $user ) if $type eq 'Format';
+    $uri = sprintf( "/method/get/%s",     $user ) if $type eq 'Method';
 
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 'error'; }
+    eval { $response = uaget( $uri ) }; if ($@) { return 'error'; }
 
     return 'error' unless $response->is_success;
 
@@ -618,10 +607,10 @@ sub _getNotifyInfo {
 }
 
 sub TriggerNotifyTest {
-    my $url = sprintf( "%s/notify/test/%s", $server, shift );
+    my $uri = sprintf( "/notify/test/%s", shift );
 
     my $response;
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    eval { $response = uaget( $uri ) }; if ($@) { return 1; }
     return 1 unless $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -632,16 +621,16 @@ sub TriggerNotifyTest {
 }
 
 sub SetNotifyInfo {
-    my ( $user, $type, $stat, $response, $url ) = @_;
+    my ( $user, $type, $stat, $response, $uri ) = @_;
     if ( $type eq 'Alarm' ) {
-        $url = sprintf( "%s/notify/setstat/%s/%s", $server, $user, $stat );
+        $uri = sprintf( "/notify/setstat/%s/%s", $user, $stat );
     } elsif ( $type eq 'Format' ) {
-        $url = sprintf( "%s/detail/setstat/%s/%s", $server, $user, $stat );
+        $uri = sprintf( "/detail/setstat/%s/%s", $user, $stat );
     } elsif ( $type eq 'Method' ) {
-        $url = sprintf( "%s/method/add/%s/%s", $server, $user, $stat );
+        $uri = sprintf( "/method/add/%s/%s", $user, $stat );
     }
 
-    eval { $response = $userAgent->get( $url ) }; if ($@) { return 1; }
+    eval { $response = uaget( $uri ) }; if ($@) { return 1; }
     return 1 unless $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -652,9 +641,10 @@ sub SetNotifyInfo {
 }
 
 sub GetUserViaToken {
-    my $url = sprintf( "%s/token/search/%s", $server, shift ); my $response;
+    my $uri = sprintf( "/token/search/%s", shift ); 
+    my $response;
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     return 'error' if $@ || not $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -662,10 +652,10 @@ sub GetUserViaToken {
 }
 
 sub GetRecords {
-    my $url = sprintf("%s/item/count/%s", $server, shift);
+    my $uri = sprintf("/item/count/%s", shift);
     my $response;
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     return '' if $@ || not $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -681,10 +671,9 @@ sub GetGraph {
 }
 
 sub GetFilterItems {
-    my $url = sprintf("%s/filter/table", $server);
     my ($self, $response, %f_items, @sp) = @_;
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( "/filter/table" ) };
     return '' if $@ || not $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -706,10 +695,10 @@ sub GetFilterItems {
 }
 
 sub GetFilterItems1 {
-    my $url = sprintf("%s/filter/list4user/%s", $server, shift);
+    my $uri = sprintf("/filter/list4user/%s", shift);
     my ($response,  %f_items, @sp);
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( $uri ) };
     return '' if $@ || not $response->is_success;
 
     my $content = $response->content; chomp( $content );
@@ -728,9 +717,8 @@ sub GetFilterItems1 {
 
 sub GetTasks {
     my ($start, $end, $response) = @_;
-    my $url = sprintf("%s/cronos/period/%s/%s",$server,$start,$end);
 
-    eval { $response = $userAgent->get( $url ) };
+    eval { $response = uaget( "/cronos/period/$start/$end" ) };
     return [] if $@ || not $response->is_success;
 
     my $content = $response->content; chomp( $content );
