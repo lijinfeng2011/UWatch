@@ -86,7 +86,7 @@
          <div class="pwd-change">
             <div class="change-box mesg-box" style="display:none"></div>
 [% IF skipOldPwd %]
-            <input type="password" name="old-pwd" readonly="true" placeholder="外部登录无需输入旧密码..">
+            <input type="password" name="old-pwd" readonly="true" style="background-color:#777;" placeholder="外部登录无需输入旧密码..">
 [% ELSE %]
             <input type="password" name="old-pwd" placeholder="输入旧密码..">
 [% END %]
