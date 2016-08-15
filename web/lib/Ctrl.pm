@@ -22,15 +22,8 @@ use NS::Hermes::Range;
 use Dancer ':syntax';
 
 my $server = 'http://127.0.0.1:9999';
-my $imgUA = LWP::UserAgent->new();
-$imgUA->timeout(10);
 
-my %allAlias = ();
-my %allLevel = ();
-my @subItems = ();
-my $g_config;
-
-my $range_db;
+my ( %allAlias, %allLevel, @subItems, $g_config, $range_db );
 
 sub uaget
 {
@@ -665,6 +658,9 @@ sub GetRecords {
 sub GetGraph {
     my ($type, $name, $small, $width, $height) = @_;
     my $url = sprintf("http://rrd.nices.net:9922/stats/rrdGraph?type=%s&name=%s&small=%s&width=%s&height=%s", $type, $name, $small, $width, $height);
+
+    my $imgUA = LWP::UserAgent->new();
+    $imgUA->timeout(10);
     my $res = $imgUA->get($url);
     
     return $res->content;
