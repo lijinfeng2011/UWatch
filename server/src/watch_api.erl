@@ -4,9 +4,13 @@
 call(List) -> 
     L = api(List),
     case length(L) > 0 of
-        true -> string:join(L,"\n");
-        false -> ""
-    end.    
+        true -> X=string:join(L,"\n");
+        false -> X ="HTTP/1.0 200 OK"
+    end,
+    case X == [] of
+        true -> "HTTP/1.0 200 OK";
+        false -> X
+    end.
 
 api(List) ->
   case List of
