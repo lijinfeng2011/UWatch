@@ -60,22 +60,14 @@
             </fieldset>
 
             <div id="alarm-form" class="alarm-change">
+               [% FOR a in alarm %]
+
                <div data-role="fieldcontain">
-                  <label for="sms">短信接收</label>
-                  <input type="tel" name="sms" value="[% sms %]" placeholder="输入您的手机号码...">
+                  <label for="[% a.name %]">[% a.label %]</label>
+                  <input type="tel" name="[% a.name %]" value="[% value.${a.name} %]" placeholder="[% a.info %]">
                </div> 
-               <div data-role="fieldcontain">
-                  <label for="blue">蓝信接收</label>
-                  <input type="tel" name="blue" value="[% blue %]" placeholder="输入您的手机号码...">
-               </div>
-               <div data-role="fieldcontain"> 
-                  <label for="zy">智鹰接收</label>
-                  <input type="text" name="zy" value="[% zy %]" placeholder="输入您的智鹰账号">
-               </div>
-               <div data-role="fieldcontain"> 
-                  <label for="qalarm">QAlarm</label>
-                  <input type="text" name="qalarm" value="[% qalarm %]" placeholder="输入您的域名账号">
-               </div>
+               [% END %]
+
                <div data-role="fieldcontain"> 
                   <label for="uwatch">转发接收</label>
                   <input type="text" name="uwatch" value="[% uwatch %]" placeholder="输入被转发人账号">

@@ -55,3 +55,17 @@ web_addr: 'http://uwatch.nices.net:8889'
 sso:
   ref: 'http://login.nices.net:8080/?ref='
   sid: 'http://login.nices.net:8080/info?sid='
+
+alarm:
+  -
+    name: 'sms1'
+    label: '短信接收1'
+    info: '输入您的手机号码...1'
+  -
+    name: 'sms2'
+    label: '短信接收2'
+    info: '输入您的手机号码...2'
+  -
+    name: 'sms3'
+    label: '短信接收3'
+    info: '输入您的手机号码...3'

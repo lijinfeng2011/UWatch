@@ -280,11 +280,12 @@ get '/profile' => sub {
 
     map {
         if ( $_ =~ m/^(.+?)-(.+)/ ) {
-            $options{$1} = $2 unless exists $options{$1};
+            $options{value}{$1} = $2 unless exists $options{$1};
         }
     } split ( /:/,
       Encode::decode_utf8(uri_unescape($notifyInfo->{repMethod})));
 
+    $options{'alarm'} = config->{'alarm'};
     template 'profile.tt', \%options;
 };
 
