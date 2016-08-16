@@ -1,0 +1,142 @@
+#!/usr/bin/perl
+use NS::Bone::Kafka;
+use NS::Util::OptConf;
+
+use NS::Hermes;
+use Data::Dumper;
+use warnings;
+use Encode;
+use utf8;
+
+BEGIN{
+    use FindBin qw( $RealBin );
+    use lib "$RealBin/lib";
+    use Client;
+};
+
+
+=head1 SYNOPSIS
+
+ $0 --topic collector --watch 127.0.0.1:9999
+    
+=cut
+
+my $option = NS::Util::OptConf->load();
+my %o = $option->get( qw( topic=s watch=s) )->dump();
+$option->assert( qw( topic watch ) );
+
+
+my $kaf = NS::Bone::Kafka->new( $o{topic} );
+
+my @watch = map{ Client->new( server => $o{watch} )->indatamodle() }0..15;
+my $watch = 0;
+
+
+
+
+my ( $last, %group, $toops, %ops ) = ( 0 );
+
+sub load
+{
+    $toops = eval{ YAML::XS::LoadFile "$RealBin/make.toops.attr.cache.nodes" };
+    warn "load toops cache:$@\n" if $@;
+
+    my $range = NS::Hermes->new( NS::Util::OptConf->load()->dump( 'range' ) );
+    my $db = $range->db;
+
+    %group = ();
+    my @cluster = $db->select( 'name,node' );
+    for my $cluster ( @cluster )
+    {
+        my ( $name, $node ) = @$cluster;
+        $group{$node}{$name} = 1;
+    }
+    map{$ops{$_->[0]} = $_->[1] }
+        $db->select( 'name,info', attr => [ 1, 'info' ], node => [ 1, 'ops' ] );
+}
+
+
+load();
+
+my $deal = sub
+{
+    my $payload = shift;
+    my $data = eval{YAML::XS::Load $payload};
+    $data ||= eval{ YAML::Load $payload };
+    return unless $data && ref $data eq 'ARRAY';
+
+
+    my($node, $mesg) = @$data;
+    $node =~ s/^node://;
+    my @group = $group{$node} ? keys %{ $group{$node} } : ( 'default' );
+
+
+    $mesg = encode( 'iso-8859-1', $mesg );
+
+    my $m = eval{ YAML::XS::Load $mesg };
+    warn "$mesg\nyaml::xs parse $node error:$@\n" if $@;
+
+    return unless $m && ref $m eq 'ARRAY';
+
+
+    my $time = '';
+    for my $t (@$m)
+    {
+        if( $t->[0][0] eq 'UPTIME' && $t->[1][1] )
+        {
+            $time = POSIX::strftime( "%Y-%m-%d %H:%M:%S", localtime $t->[1][1] );last;
+        }
+    }
+
+    my ( @all, @ops );
+
+    my $t = time;
+    if( ! ( $t % 60 ) && $last != $t )
+    {
+        $toops = load();
+        $last = $t;
+    }
+
+    for my $table ( @$m )
+    {
+        next if $table->[0][0] ne 'TEST';
+
+        shift @$table;
+        for my $row ( @$table )
+        {
+            my ( $name, $stat, $group, $info ) = @$row[qw( 0 10 11 13 )];
+            next unless $stat && $stat eq 'err';
+
+            my $detail = ( defined $info ) ? "$name ($info)" : $name;
+
+
+#            map{ print "@@#$_.$group#$time $node#$detail\n"; }@group;
+
+            my %opsinfo = map{ $_ => $ops{$_} || 'noops' }@group;
+
+            map{
+                sendmesg( "@@#$_.all#$time $node#$detail\n" );
+                sendmesg( "@@#$_.$group#$time $node#$detail\n" );
+            }@group, 'all', values %opsinfo;
+
+            if( $toops->{$node} )
+            {
+                sendmesg( "@@#ops.all#$time $node#$detail\n" );
+                sendmesg( "@@#ops.$group#$time $node#$detail\n" );
+            }
+        }
+    }
+};
+        
+$kaf->loop( $deal, verbose => 0, mem_offset => "kafka:offset:$o{topic}" );
+
+sub sendmesg
+{
+    my $data = shift;
+    print $data;
+
+    $watch ++;
+    $watch = 0 if $watch >15;
+    $watch[$watch]->send( encode( 'utf8', $data ) );
+}
+
