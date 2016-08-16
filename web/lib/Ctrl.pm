@@ -240,7 +240,7 @@ sub GetAllBiz {
 
 sub GetAllAlarmItem {
     GetItemInfos();
-    return undef unless %allAlias;
+#    return undef unless %allAlias;
 
     $g_config = eval { YAML::XS::LoadFile("$Bin/../lib/config.yml") } unless $g_config;
     my %groupMap = ( rule => {} );
@@ -279,7 +279,7 @@ sub GetSubscribeDetail {
     my ( $subPrefix, $user, @items, @selfBooked ) = @_;
 
     GetItemInfos() unless %allAlias;
-    return unless %allAlias;
+#    return unless %allAlias;
 
     GetSubItems( $user ); 
 
