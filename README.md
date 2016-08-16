@@ -47,3 +47,7 @@
          
          根据实际情况完成插件，插件路径 web/code/alarm_api.$name , 其中$name与II.4中的name同名，
          插件的%param参数会获取到所以信息，插件需要把报警发出去
+
+    IV. 启动producer从kafka拉数据
+
+         ./service//producer.kafka.collector -t collect -w 127.0.0.1:9999
