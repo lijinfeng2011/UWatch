@@ -1,0 +1,70 @@
+#!/usr/bin/perl
+use Dancer;
+use Carp;
+
+use Data::Dumper;
+use Dancer qw( debug info );
+use Encode;
+
+use utf8;
+binmode( STDIN, ':encoding(utf8)' );
+binmode( STDOUT, ':encoding(utf8)');
+binmode( STDERR, ':encoding(utf8)');
+binmode STDOUT, ':utf8';
+
+our %code;
+use File::Basename;
+
+BEGIN
+{
+    use FindBin qw( $RealBin );
+    for my $code ( glob "$RealBin/../code/alarm_api.*" )
+    {
+        my $name = basename $code;
+        $code{$name} = do $code;
+        die "load code $name error\n" unless ref $code{$name} eq 'CODE';
+    }
+    
+    use Data::Dumper; print Dumper \%code;
+
+
+};
+
+#user info userinfo level token detail method
+any '/uwatch_alarm' => sub {
+    return 'skip' if request->env->{REMOTE_ADDR} ne '127.0.0.1';
+
+    my %param = %{request->params};
+    info join ":", map{ sprintf "$_:%s", $param{$_} ||'null' }
+        qw(user userinfo token method level info );
+
+    my ( $mesg, $method ) = @param{ qw( info method ) };
+
+    return 'fail' unless $method && $mesg;
+
+    for my $to ( split /:|\|/, $method )
+    {
+        if( $to =~ /^(\w+)-(.+)$/ )
+        {
+            if( my $c = $code{"alarm_api.$1"} )
+            {
+                &$c( %param );
+            }
+            else
+            {
+                error "no the code alarm_api.$to to send mesg\n";
+            }
+        }
+        else
+        {
+            error "unkown info $to\n"
+        }
+
+    }
+
+    return 'ok';
+};
+
+dance;
+
+1;

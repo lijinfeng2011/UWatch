@@ -1,0 +1,14 @@
+#!/home/s/ops/perl/bin/perl: alarm_api.sms1
+use warnings;
+use strict;
+
+use Data::Dumper;
+use Dancer qw( debug info );
+use YAML::XS;
+
+return sub
+{
+    my %param = @_;
+    info  YAML::XS::Dump \%param;
+    return 1;
+};
