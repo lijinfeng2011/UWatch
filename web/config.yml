@@ -58,7 +58,7 @@ sso:
 
 alarm:
   -
-    name: 'sms1'
+    name: 'foo'
     label: '短信接收1'
     info: '输入您的手机号码...1'
   -
